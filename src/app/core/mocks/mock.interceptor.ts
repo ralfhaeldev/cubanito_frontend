@@ -1,189 +1,183 @@
 import { HttpInterceptorFn, HttpResponse } from '@angular/common/http';
 import { of, delay } from 'rxjs';
 import {
-  MOCK_USUARIOS, MOCK_SEDES, MOCK_PRODUCTOS,
-  MOCK_PEDIDOS, MOCK_CAJA, MOCK_MOVIMIENTOS,
+  MOCK_USUARIOS, MOCK_SEDES, MOCK_PRODUCTOS, MOCK_PEDIDOS,
+  MOCK_CAJA, MOCK_MOVIMIENTOS,
+  MOCK_VENTAS_DIARIAS, MOCK_PRODUCTOS_VENDIDOS, MOCK_CAJA_HISTORIAL,
 } from './mock.data';
 import { EstadoPedido, Pedido } from '../../shared/models';
- 
 
-// ─── Activar/desactivar mocks ─────────────────────────────────────────────────
-export const MOCKS_ENABLED = true;   // ← cambiar a false cuando el backend esté listo
+export const MOCKS_ENABLED = true;
 
-// Estado en memoria (simula la BD)
-let productos  = [...MOCK_PRODUCTOS];
-let pedidos    = [...MOCK_PEDIDOS];
-let movimientos = [...MOCK_MOVIMIENTOS];
-let caja       = { ...MOCK_CAJA };
-let usuarios   = MOCK_USUARIOS.map(({ password: _, ...u }) => u);
+let productos    = [...MOCK_PRODUCTOS];
+let pedidos      = [...MOCK_PEDIDOS];
+let movimientos  = [...MOCK_MOVIMIENTOS];
+let caja         = { ...MOCK_CAJA };
+let usuarios     = MOCK_USUARIOS.map(({ password: _p, ...u }) => u);
 
-function ok(body: unknown, ms = 250) {
-  return of(new HttpResponse({ status: 200, body })).pipe(delay(ms));
-}
-
-function created(body: unknown) {
-  return of(new HttpResponse({ status: 201, body })).pipe(delay(300));
-}
-
-function noContent() {
-  return of(new HttpResponse({ status: 204 })).pipe(delay(200));
-}
+const ok        = (body: unknown, ms = 250) => of(new HttpResponse({ status: 200, body })).pipe(delay(ms));
+const created   = (body: unknown)           => of(new HttpResponse({ status: 201, body })).pipe(delay(300));
+const noContent = ()                        => of(new HttpResponse({ status: 204 })).pipe(delay(200));
 
 function makeJwt(payload: Record<string, unknown>): string {
-  const header  = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const body    = btoa(JSON.stringify({ ...payload, iat: Date.now(), exp: Date.now() / 1000 + 28800 }));
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const body   = btoa(JSON.stringify({ ...payload, iat: Date.now(), exp: Math.floor(Date.now() / 1000) + 28800 }));
   return `${header}.${body}.mock_signature`;
 }
 
 export const mockInterceptor: HttpInterceptorFn = (req, next) => {
   if (!MOCKS_ENABLED) return next(req);
 
-  const { method, url } = req;
+  const { method } = req;
+  const path = req.url.replace(/^https?:\/\/[^/]+\//, '').split('?')[0];
+  const params = new URL(req.url, 'http://localhost').searchParams;
 
-  // Extraer path relativo: /auth/login → auth/login
-  const path = url.replace(/^https?:\/\/[^/]+\//, '');
-
-  // ── POST /auth/login ────────────────────────────────────────────────────────
+  // ── Auth ────────────────────────────────────────────────────────────────────
   if (method === 'POST' && path === 'auth/login') {
     const { email, password } = req.body as { email: string; password: string };
     const user = MOCK_USUARIOS.find((u) => u.email === email && u.password === password);
-
-    if (!user) {
-      return of(new HttpResponse({
-        status: 401,
-        body: { message: 'Credenciales inválidas' },
-      })).pipe(delay(300));
-    }
-
+    if (!user) return of(new HttpResponse({ status: 401, body: { message: 'Credenciales inválidas' } })).pipe(delay(300));
     const token = makeJwt({ sub: user.id, email: user.email, rol: user.rol, sedeId: user.sedeId });
     return ok({ accessToken: token, user: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol, sedeId: user.sedeId } });
   }
 
-  // ── GET /sedes ──────────────────────────────────────────────────────────────
-  if (method === 'GET' && path === 'sedes') {
-    return ok(MOCK_SEDES);
-  }
+  // ── Sedes ───────────────────────────────────────────────────────────────────
+  if (method === 'GET' && path === 'sedes') return ok(MOCK_SEDES);
 
-  // ── GET /productos ──────────────────────────────────────────────────────────
-  if (method === 'GET' && path === 'productos') {
-    return ok(productos);
-  }
-
-  // ── POST /productos ─────────────────────────────────────────────────────────
-  if (method === 'POST' && path === 'productos') {
+  // ── Productos ───────────────────────────────────────────────────────────────
+  if (method === 'GET'    && path === 'productos')       return ok(productos);
+  if (method === 'POST'   && path === 'productos') {
     const body = req.body as { nombre: string; precioVenta: number; precioCompra: number };
     const nuevo = { id: `p-${Date.now()}`, ...body, activo: true };
     productos = [nuevo, ...productos];
     return created(nuevo);
   }
-
-  // ── PATCH /productos/:id ────────────────────────────────────────────────────
-  if (method === 'PATCH' && path.startsWith('productos/')) {
-    const id  = path.split('/')[1];
-    const body = req.body as Partial<typeof productos[0]>;
-    productos = productos.map((p) => p.id === id ? { ...p, ...body } : p);
+  if (method === 'PATCH'  && path.startsWith('productos/')) {
+    const id = path.split('/')[1];
+    productos = productos.map((p) => p.id === id ? { ...p, ...(req.body as object) } : p);
     return ok(productos.find((p) => p.id === id));
   }
-
-  // ── DELETE /productos/:id ───────────────────────────────────────────────────
   if (method === 'DELETE' && path.startsWith('productos/')) {
     const id = path.split('/')[1];
     productos = productos.map((p) => p.id === id ? { ...p, activo: false } : p);
     return noContent();
   }
 
-  // ── GET /pedidos ────────────────────────────────────────────────────────────
-  if (method === 'GET' && path === 'pedidos') {
-    return ok(pedidos);
-  }
-
-  // ── GET /pedidos/activos ────────────────────────────────────────────────────
+  // ── Pedidos ──────────────────────────────────────────────────────────────────
+  if (method === 'GET' && path === 'pedidos')        return ok(pedidos);
   if (method === 'GET' && path === 'pedidos/activos') {
-    const activos = pedidos.filter((p) =>
-      ![EstadoPedido.Finalizado, EstadoPedido.Rechazado].includes(p.estado),
-    );
-    return ok(activos);
+    return ok(pedidos.filter((p) => ![EstadoPedido.Finalizado, EstadoPedido.Rechazado].includes(p.estado)));
   }
-
-  // ── GET /pedidos/:id ────────────────────────────────────────────────────────
   if (method === 'GET' && path.startsWith('pedidos/') && path.split('/').length === 2) {
-    const id = path.split('/')[1];
-    return ok(pedidos.find((p) => p.id === id) ?? null);
+    return ok(pedidos.find((p) => p.id === path.split('/')[1]) ?? null);
   }
-
-  // ── POST /pedidos ───────────────────────────────────────────────────────────
   if (method === 'POST' && path === 'pedidos') {
     const body = req.body as Partial<Pedido>;
     const nuevo: Pedido = {
-      id: `ped-${Date.now()}`,
-      tipo: body.tipo!,
-      estado: EstadoPedido.Pendiente,
-      items: body.items ?? [],
-      clienteDomicilio: body.clienteDomicilio,
+      id: `ped-${Date.now()}`, tipo: body.tipo!, estado: EstadoPedido.Pendiente,
+      items: body.items ?? [], clienteDomicilio: body.clienteDomicilio,
       total: body.items?.reduce((s, i) => s + i.subtotal, 0) ?? 0,
-      meseroId: 'u-3',
-      meseroNombre: 'Pedro Mesero',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      meseroId: 'u-3', meseroNombre: 'Pedro Mesero',
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     };
     pedidos = [nuevo, ...pedidos];
     return created(nuevo);
   }
-
-  // ── PATCH /pedidos/:id/estado ───────────────────────────────────────────────
   if (method === 'PATCH' && path.match(/^pedidos\/[^/]+\/estado$/)) {
-    const id     = path.split('/')[1];
+    const id = path.split('/')[1];
     const estado = (req.body as { estado: EstadoPedido }).estado;
     pedidos = pedidos.map((p) => p.id === id ? { ...p, estado, updatedAt: new Date().toISOString() } : p);
     return ok(pedidos.find((p) => p.id === id));
   }
-
-  // ── POST /pedidos/:id/finalizar ─────────────────────────────────────────────
   if (method === 'POST' && path.match(/^pedidos\/[^/]+\/finalizar$/)) {
     const id = path.split('/')[1];
-    pedidos = pedidos.map((p) =>
-      p.id === id ? { ...p, estado: EstadoPedido.Finalizado, updatedAt: new Date().toISOString() } : p,
-    );
+    pedidos = pedidos.map((p) => p.id === id
+      ? { ...p, estado: EstadoPedido.Finalizado, updatedAt: new Date().toISOString() } : p);
     return ok({ success: true });
   }
 
-  // ── GET /caja ───────────────────────────────────────────────────────────────
-  if (method === 'GET' && path === 'caja') {
-    return ok(caja);
-  }
-
-  // ── POST /caja/abrir ────────────────────────────────────────────────────────
+  // ── Caja ─────────────────────────────────────────────────────────────────────
+  if (method === 'GET'  && path === 'caja')        return ok(caja);
   if (method === 'POST' && path === 'caja/abrir') {
     const { montoInicial } = req.body as { montoInicial: number };
     caja = { id: `caja-${Date.now()}`, fecha: new Date().toISOString().split('T')[0], montoInicial, abierta: true, abiertaPor: 'u-2' };
     return created(caja);
   }
-
-  // ── POST /caja/cerrar ───────────────────────────────────────────────────────
   if (method === 'POST' && path === 'caja/cerrar') {
     const { montoFinal } = req.body as { montoFinal: number };
     caja = { ...caja, montoFinal, abierta: false, cerradaPor: 'u-2' };
     return ok(caja);
   }
 
-  // ── GET /movimientos ────────────────────────────────────────────────────────
-  if (method === 'GET' && path === 'movimientos') {
-    return ok(movimientos);
-  }
-
-  // ── POST /movimientos ───────────────────────────────────────────────────────
+  // ── Movimientos ───────────────────────────────────────────────────────────────
+  if (method === 'GET' && path === 'movimientos') return ok(movimientos);
   if (method === 'POST' && path === 'movimientos') {
     const body = req.body as { tipo: string; monto: number; descripcion: string };
-    const nuevo = { id: `mov-${Date.now()}`, cajaId: caja.id, tipo: body.tipo as any, monto: body.monto, descripcion: body.descripcion, createdAt: new Date().toISOString() };
+    const nuevo = { id: `mov-${Date.now()}`, cajaId: caja.id, ...body, createdAt: new Date().toISOString(), tipo: body.tipo as any };
     movimientos = [nuevo, ...movimientos];
     return created(nuevo);
   }
 
-  // ── GET /usuarios ───────────────────────────────────────────────────────────
-  if (method === 'GET' && path === 'usuarios') {
-    return ok(usuarios);
+  // ── Usuarios ──────────────────────────────────────────────────────────────────
+  if (method === 'GET' && path === 'usuarios') return ok(usuarios);
+
+  // ── Reportes ──────────────────────────────────────────────────────────────────
+
+  // GET /reportes/ventas?periodo=7d|30d|today
+  if (method === 'GET' && path === 'reportes/ventas') {
+    const periodo = params.get('periodo') ?? '7d';
+    let dias = MOCK_VENTAS_DIARIAS;
+    if (periodo === 'today') dias = MOCK_VENTAS_DIARIAS.slice(-1);
+    else if (periodo === '7d') dias = MOCK_VENTAS_DIARIAS;
+    else if (periodo === '30d') {
+      // Repetir los datos para simular 30 días
+      const extended = [];
+      for (let i = 29; i >= 0; i--) {
+        const base = MOCK_VENTAS_DIARIAS[i % 7];
+        const d = new Date(); d.setDate(d.getDate() - i);
+        const jitter = 0.75 + Math.random() * 0.5;
+        extended.push({
+          fecha:      d.toISOString().split('T')[0],
+          ventas:     Math.round(base.ventas * jitter),
+          pedidos:    Math.round(base.pedidos * jitter),
+          domicilios: Math.round(base.domicilios * jitter),
+        });
+      }
+      dias = extended;
+    }
+    return ok(dias, 400);
   }
 
-  // ── Cualquier otra request — pasar al backend real ──────────────────────────
+  // GET /reportes/productos-top?periodo=7d|30d
+  if (method === 'GET' && path === 'reportes/productos-top') {
+    const periodo = params.get('periodo') ?? '7d';
+    const factor  = periodo === '30d' ? 4.2 : 1;
+    const datos   = MOCK_PRODUCTOS_VENDIDOS.map((p) => ({
+      ...p,
+      cantidad: Math.round(p.cantidad * factor),
+      ingresos: Math.round(p.ingresos * factor),
+    }));
+    return ok(datos, 400);
+  }
+
+  // GET /reportes/caja-historial
+  if (method === 'GET' && path === 'reportes/caja-historial') {
+    return ok(MOCK_CAJA_HISTORIAL, 400);
+  }
+
+  // GET /reportes/resumen?periodo=7d|30d|today
+  if (method === 'GET' && path === 'reportes/resumen') {
+    const periodo = params.get('periodo') ?? '7d';
+    const ventas  = MOCK_VENTAS_DIARIAS;
+    const slice   = periodo === 'today' ? ventas.slice(-1) : periodo === '7d' ? ventas : ventas;
+    const factor  = periodo === '30d' ? 4.2 : 1;
+    return ok({
+      totalVentas:     Math.round(slice.reduce((s, v) => s + v.ventas, 0) * factor),
+      totalPedidos:    Math.round(slice.reduce((s, v) => s + v.pedidos, 0) * factor),
+      totalDomicilios: Math.round(slice.reduce((s, v) => s + v.domicilios, 0) * factor),
+      ticketPromedio:  Math.round(slice.reduce((s, v) => s + v.ventas, 0) / Math.max(slice.reduce((s, v) => s + v.pedidos, 0), 1) * factor),
+    }, 400);
+  }
+
   return next(req);
 };
