@@ -18,7 +18,6 @@ const NAV: NavItem[] = [
   { label: 'Productos',   route: '/productos',   icon: 'lunch_dining', roles: [Rol.AdminSede] },
   { label: 'Inventario',  route: '/inventario',  icon: 'inventory_2',  roles: [Rol.AdminSede] },
   { label: 'Caja',        route: '/caja',        icon: 'point_of_sale',roles: [Rol.AdminSede] },
-  { label: 'Movimientos', route: '/movimientos', icon: 'swap_vert',    roles: [Rol.AdminSede] },
   { label: 'Reportes',    route: '/reportes',    icon: 'bar_chart',    roles: [Rol.AdminSede, Rol.SuperAdmin] },
   { label: 'Usuarios',    route: '/usuarios',    icon: 'group',        roles: [Rol.AdminSede] },
   { label: 'Sedes',       route: '/sedes',       icon: 'store',        roles: [Rol.SuperAdmin] },

@@ -4,6 +4,6 @@ export const CAJA_ROUTES: Routes = [
   {
     path: '',
     loadComponent: () =>
-      import('./components/caja/caja').then((m) => m.Caja),
+      import('./components/caja/caja').then((m) => m.CajaView),
   },
 ];

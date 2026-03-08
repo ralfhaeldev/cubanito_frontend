@@ -50,12 +50,6 @@ export const routes: Routes = [
           import('./features/caja/caja.routes').then((m) => m.CAJA_ROUTES),
       },
       {
-        path: 'movimientos',
-        canActivate: [roleGuard([Rol.AdminSede])],
-        loadChildren: () =>
-          import('./features/movimientos/movimientos.routes').then((m) => m.MOVIMIENTOS_ROUTES),
-      },
-      {
         path: 'reportes',
         canActivate: [roleGuard([Rol.AdminSede, Rol.SuperAdmin])],
         loadChildren: () =>
