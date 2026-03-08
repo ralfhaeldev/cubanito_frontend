@@ -1,28 +1,36 @@
 import { HttpInterceptorFn, HttpResponse } from '@angular/common/http';
 import { of, delay } from 'rxjs';
 import {
-  MOCK_USUARIOS, MOCK_SEDES, MOCK_PRODUCTOS, MOCK_PEDIDOS,
-  MOCK_CAJA, MOCK_MOVIMIENTOS,
-  MOCK_VENTAS_DIARIAS, MOCK_PRODUCTOS_VENDIDOS, MOCK_CAJA_HISTORIAL,
+  MOCK_USUARIOS,
+  MOCK_SEDES,
+  MOCK_PRODUCTOS,
+  MOCK_PEDIDOS,
+  MOCK_CAJA,
+  MOCK_MOVIMIENTOS,
+  MOCK_VENTAS_DIARIAS,
+  MOCK_PRODUCTOS_VENDIDOS,
+  MOCK_CAJA_HISTORIAL,
 } from './mock.data';
 import { EstadoPedido, Pedido, Sede } from '../../shared/models';
 
 export const MOCKS_ENABLED = true;
 
-let productos    = [...MOCK_PRODUCTOS];
-let pedidos      = [...MOCK_PEDIDOS];
-let movimientos  = [...MOCK_MOVIMIENTOS];
-let caja         = { ...MOCK_CAJA };
-let usuarios     = MOCK_USUARIOS.map(({ password: _p, ...u }) => u);
+let productos = [...MOCK_PRODUCTOS];
+let pedidos = [...MOCK_PEDIDOS];
+let movimientos = [...MOCK_MOVIMIENTOS];
+let caja = { ...MOCK_CAJA };
+let usuarios = MOCK_USUARIOS.map(({ password: _p, ...u }) => u);
 let sedes = [...MOCK_SEDES];
 
-const ok        = (body: unknown, ms = 250) => of(new HttpResponse({ status: 200, body })).pipe(delay(ms));
-const created   = (body: unknown)           => of(new HttpResponse({ status: 201, body })).pipe(delay(300));
-const noContent = ()                        => of(new HttpResponse({ status: 204 })).pipe(delay(200));
+const ok = (body: unknown, ms = 250) => of(new HttpResponse({ status: 200, body })).pipe(delay(ms));
+const created = (body: unknown) => of(new HttpResponse({ status: 201, body })).pipe(delay(300));
+const noContent = () => of(new HttpResponse({ status: 204 })).pipe(delay(200));
 
 function makeJwt(payload: Record<string, unknown>): string {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const body   = btoa(JSON.stringify({ ...payload, iat: Date.now(), exp: Math.floor(Date.now() / 1000) + 28800 }));
+  const body = btoa(
+    JSON.stringify({ ...payload, iat: Date.now(), exp: Math.floor(Date.now() / 1000) + 28800 }),
+  );
   return `${header}.${body}.mock_signature`;
 }
 
@@ -37,16 +45,28 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
   if (method === 'POST' && path === 'auth/login') {
     const { email, password } = req.body as { email: string; password: string };
     const user = MOCK_USUARIOS.find((u) => u.email === email && u.password === password);
-    if (!user) return of(new HttpResponse({ status: 401, body: { message: 'Credenciales inválidas' } })).pipe(delay(300));
+    if (!user)
+      return of(
+        new HttpResponse({ status: 401, body: { message: 'Credenciales inválidas' } }),
+      ).pipe(delay(300));
     const token = makeJwt({ sub: user.id, email: user.email, rol: user.rol, sedeId: user.sedeId });
-    return ok({ accessToken: token, user: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol, sedeId: user.sedeId } });
+    return ok({
+      accessToken: token,
+      user: {
+        id: user.id,
+        nombre: user.nombre,
+        email: user.email,
+        rol: user.rol,
+        sedeId: user.sedeId,
+      },
+    });
   }
 
   // ── Sedes ───────────────────────────────────────────────────────────────────
   if (method === 'GET' && path === 'sedes') return ok(MOCK_SEDES);
 
   // ── Productos ───────────────────────────────────────────────────────────────
-  if (method === 'GET'  && path === 'sedes') return ok(sedes);
+  if (method === 'GET' && path === 'sedes') return ok(sedes);
 
   if (method === 'POST' && path === 'sedes') {
     const body = req.body as { nombre: string };
@@ -57,7 +77,7 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
 
   if (method === 'PATCH' && path.startsWith('sedes/')) {
     const id = path.split('/')[1];
-    sedes = sedes.map((s) => s.id === id ? { ...s, ...(req.body as object) } : s);
+    sedes = sedes.map((s) => (s.id === id ? { ...s, ...(req.body as object) } : s));
     return ok(sedes.find((s) => s.id === id));
   }
 
@@ -68,9 +88,11 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
   }
 
   // ── Pedidos ──────────────────────────────────────────────────────────────────
-  if (method === 'GET' && path === 'pedidos')        return ok(pedidos);
+  if (method === 'GET' && path === 'pedidos') return ok(pedidos);
   if (method === 'GET' && path === 'pedidos/activos') {
-    return ok(pedidos.filter((p) => ![EstadoPedido.Finalizado, EstadoPedido.Rechazado].includes(p.estado)));
+    return ok(
+      pedidos.filter((p) => ![EstadoPedido.Finalizado, EstadoPedido.Rechazado].includes(p.estado)),
+    );
   }
   if (method === 'GET' && path.startsWith('pedidos/') && path.split('/').length === 2) {
     return ok(pedidos.find((p) => p.id === path.split('/')[1]) ?? null);
@@ -78,11 +100,16 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
   if (method === 'POST' && path === 'pedidos') {
     const body = req.body as Partial<Pedido>;
     const nuevo: Pedido = {
-      id: `ped-${Date.now()}`, tipo: body.tipo!, estado: EstadoPedido.Pendiente,
-      items: body.items ?? [], clienteDomicilio: body.clienteDomicilio,
+      id: `ped-${Date.now()}`,
+      tipo: body.tipo!,
+      estado: EstadoPedido.Pendiente,
+      items: body.items ?? [],
+      clienteDomicilio: body.clienteDomicilio,
       total: body.items?.reduce((s, i) => s + i.subtotal, 0) ?? 0,
-      meseroId: 'u-3', meseroNombre: 'Pedro Mesero',
-      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      meseroId: 'u-3',
+      meseroNombre: 'Pedro Mesero',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     pedidos = [nuevo, ...pedidos];
     return created(nuevo);
@@ -90,21 +117,32 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
   if (method === 'PATCH' && path.match(/^pedidos\/[^/]+\/estado$/)) {
     const id = path.split('/')[1];
     const estado = (req.body as { estado: EstadoPedido }).estado;
-    pedidos = pedidos.map((p) => p.id === id ? { ...p, estado, updatedAt: new Date().toISOString() } : p);
+    pedidos = pedidos.map((p) =>
+      p.id === id ? { ...p, estado, updatedAt: new Date().toISOString() } : p,
+    );
     return ok(pedidos.find((p) => p.id === id));
   }
   if (method === 'POST' && path.match(/^pedidos\/[^/]+\/finalizar$/)) {
     const id = path.split('/')[1];
-    pedidos = pedidos.map((p) => p.id === id
-      ? { ...p, estado: EstadoPedido.Finalizado, updatedAt: new Date().toISOString() } : p);
+    pedidos = pedidos.map((p) =>
+      p.id === id
+        ? { ...p, estado: EstadoPedido.Finalizado, updatedAt: new Date().toISOString() }
+        : p,
+    );
     return ok({ success: true });
   }
 
   // ── Caja ─────────────────────────────────────────────────────────────────────
-  if (method === 'GET'  && path === 'caja')        return ok(caja);
+  if (method === 'GET' && path === 'caja') return ok(caja);
   if (method === 'POST' && path === 'caja/abrir') {
     const { montoInicial } = req.body as { montoInicial: number };
-    caja = { id: `caja-${Date.now()}`, fecha: new Date().toISOString().split('T')[0], montoInicial, abierta: true, abiertaPor: 'u-2' };
+    caja = {
+      id: `caja-${Date.now()}`,
+      fecha: new Date().toISOString().split('T')[0],
+      montoInicial,
+      abierta: true,
+      abiertaPor: 'u-2',
+    };
     return created(caja);
   }
   if (method === 'POST' && path === 'caja/cerrar') {
@@ -117,13 +155,32 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
   if (method === 'GET' && path === 'movimientos') return ok(movimientos);
   if (method === 'POST' && path === 'movimientos') {
     const body = req.body as { tipo: string; monto: number; descripcion: string };
-    const nuevo = { id: `mov-${Date.now()}`, cajaId: caja.id, ...body, createdAt: new Date().toISOString(), tipo: body.tipo as any };
+    const nuevo = {
+      id: `mov-${Date.now()}`,
+      cajaId: caja.id,
+      ...body,
+      createdAt: new Date().toISOString(),
+      tipo: body.tipo as any,
+    };
     movimientos = [nuevo, ...movimientos];
     return created(nuevo);
   }
 
   // ── Usuarios ──────────────────────────────────────────────────────────────────
   if (method === 'GET' && path === 'usuarios') return ok(usuarios);
+
+  if (method === 'POST' && path === 'usuarios') {
+    const body = req.body as any;
+    const nuevo = { id: `u-${Date.now()}`, ...body, activo: true };
+    usuarios = [nuevo, ...usuarios];
+    return created(nuevo);
+  }
+
+  if (method === 'PATCH' && path.startsWith('usuarios/')) {
+    const id = path.split('/')[1];
+    usuarios = usuarios.map((u) => (u.id === id ? { ...u, ...(req.body as object) } : u));
+    return ok(usuarios.find((u) => u.id === id));
+  }
 
   // ── Reportes ──────────────────────────────────────────────────────────────────
 
@@ -138,12 +195,13 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
       const extended = [];
       for (let i = 29; i >= 0; i--) {
         const base = MOCK_VENTAS_DIARIAS[i % 7];
-        const d = new Date(); d.setDate(d.getDate() - i);
+        const d = new Date();
+        d.setDate(d.getDate() - i);
         const jitter = 0.75 + Math.random() * 0.5;
         extended.push({
-          fecha:      d.toISOString().split('T')[0],
-          ventas:     Math.round(base.ventas * jitter),
-          pedidos:    Math.round(base.pedidos * jitter),
+          fecha: d.toISOString().split('T')[0],
+          ventas: Math.round(base.ventas * jitter),
+          pedidos: Math.round(base.pedidos * jitter),
           domicilios: Math.round(base.domicilios * jitter),
         });
       }
@@ -155,8 +213,8 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
   // GET /reportes/productos-top?periodo=7d|30d
   if (method === 'GET' && path === 'reportes/productos-top') {
     const periodo = params.get('periodo') ?? '7d';
-    const factor  = periodo === '30d' ? 4.2 : 1;
-    const datos   = MOCK_PRODUCTOS_VENDIDOS.map((p) => ({
+    const factor = periodo === '30d' ? 4.2 : 1;
+    const datos = MOCK_PRODUCTOS_VENDIDOS.map((p) => ({
       ...p,
       cantidad: Math.round(p.cantidad * factor),
       ingresos: Math.round(p.ingresos * factor),
@@ -172,15 +230,25 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
   // GET /reportes/resumen?periodo=7d|30d|today
   if (method === 'GET' && path === 'reportes/resumen') {
     const periodo = params.get('periodo') ?? '7d';
-    const ventas  = MOCK_VENTAS_DIARIAS;
-    const slice   = periodo === 'today' ? ventas.slice(-1) : periodo === '7d' ? ventas : ventas;
-    const factor  = periodo === '30d' ? 4.2 : 1;
-    return ok({
-      totalVentas:     Math.round(slice.reduce((s, v) => s + v.ventas, 0) * factor),
-      totalPedidos:    Math.round(slice.reduce((s, v) => s + v.pedidos, 0) * factor),
-      totalDomicilios: Math.round(slice.reduce((s, v) => s + v.domicilios, 0) * factor),
-      ticketPromedio:  Math.round(slice.reduce((s, v) => s + v.ventas, 0) / Math.max(slice.reduce((s, v) => s + v.pedidos, 0), 1) * factor),
-    }, 400);
+    const ventas = MOCK_VENTAS_DIARIAS;
+    const slice = periodo === 'today' ? ventas.slice(-1) : periodo === '7d' ? ventas : ventas;
+    const factor = periodo === '30d' ? 4.2 : 1;
+    return ok(
+      {
+        totalVentas: Math.round(slice.reduce((s, v) => s + v.ventas, 0) * factor),
+        totalPedidos: Math.round(slice.reduce((s, v) => s + v.pedidos, 0) * factor),
+        totalDomicilios: Math.round(slice.reduce((s, v) => s + v.domicilios, 0) * factor),
+        ticketPromedio: Math.round(
+          (slice.reduce((s, v) => s + v.ventas, 0) /
+            Math.max(
+              slice.reduce((s, v) => s + v.pedidos, 0),
+              1,
+            )) *
+            factor,
+        ),
+      },
+      400,
+    );
   }
 
   return next(req);
