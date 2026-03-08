@@ -1,4 +1,4 @@
-import { Sede, Usuario, Rol, Producto, Pedido, TipoPedido, EstadoPedido, Caja, Movimiento, TipoMovimiento } from "../../shared/models";
+import { Sede, Usuario, Rol, Producto, Pedido, TipoPedido, EstadoPedido, Caja, Movimiento, TipoMovimiento, ItemInventario, AjusteInventario } from "../../shared/models";
 
  
 
@@ -27,6 +27,40 @@ export const MOCK_PRODUCTOS: Producto[] = [
   { id: 'p-5', nombre: 'Agua',                 precioVenta: 2000,  precioCompra: 800,  activo: true },
   { id: 'p-6', nombre: 'Papa Francesa',        precioVenta: 6000,  precioCompra: 2000, activo: true },
   { id: 'p-7', nombre: 'Cubanito Vegetariano', precioVenta: 13000, precioCompra: 5500, activo: false },
+];
+
+// ─── Inventario ──────────────────────────────────────────────────────────────────
+
+export const MOCK_INVENTARIO: ItemInventario[] = [
+  // Panadería
+  { id: 'inv-1', nombre: 'Pan de hamburguesa', unidad: 'und', stockActual: 45,  stockMinimo: 20, stockIdeal: 100, categoria: 'Panadería',   activo: true,  ultimoAjuste: new Date(Date.now() - 2 * 3600000).toISOString() },
+  { id: 'inv-2', nombre: 'Pan de perro',        unidad: 'und', stockActual: 8,   stockMinimo: 15, stockIdeal: 60,  categoria: 'Panadería',   activo: true,  ultimoAjuste: new Date(Date.now() - 5 * 3600000).toISOString() },
+  // Carnes
+  { id: 'inv-3', nombre: 'Carne molida',        unidad: 'kg',  stockActual: 4.5, stockMinimo: 3,  stockIdeal: 10,  categoria: 'Carnes',      activo: true,  ultimoAjuste: new Date(Date.now() - 1 * 3600000).toISOString() },
+  { id: 'inv-4', nombre: 'Pollo desmechado',    unidad: 'kg',  stockActual: 1.2, stockMinimo: 2,  stockIdeal: 8,   categoria: 'Carnes',      activo: true,  ultimoAjuste: new Date(Date.now() - 8 * 3600000).toISOString() },
+  { id: 'inv-5', nombre: 'Jamón serrano',       unidad: 'kg',  stockActual: 2.8, stockMinimo: 1,  stockIdeal: 5,   categoria: 'Carnes',      activo: true,  ultimoAjuste: null },
+  // Lácteos
+  { id: 'inv-6', nombre: 'Queso mozzarella',    unidad: 'kg',  stockActual: 3.2, stockMinimo: 2,  stockIdeal: 6,   categoria: 'Lácteos',     activo: true,  ultimoAjuste: new Date(Date.now() - 3 * 3600000).toISOString() },
+  { id: 'inv-7', nombre: 'Queso cheddar',       unidad: 'kg',  stockActual: 0.8, stockMinimo: 1,  stockIdeal: 4,   categoria: 'Lácteos',     activo: true,  ultimoAjuste: new Date(Date.now() - 6 * 3600000).toISOString() },
+  // Salsas
+  { id: 'inv-8', nombre: 'Mayonesa',            unidad: 'lt',  stockActual: 2.5, stockMinimo: 1,  stockIdeal: 5,   categoria: 'Salsas',      activo: true,  ultimoAjuste: null },
+  { id: 'inv-9', nombre: 'Salsa BBQ',           unidad: 'lt',  stockActual: 0.4, stockMinimo: 0.5,stockIdeal: 3,   categoria: 'Salsas',      activo: true,  ultimoAjuste: new Date(Date.now() - 12 * 3600000).toISOString() },
+  // Verduras
+  { id: 'inv-a', nombre: 'Lechuga',             unidad: 'und', stockActual: 12,  stockMinimo: 5,  stockIdeal: 20,  categoria: 'Verduras',    activo: true,  ultimoAjuste: new Date(Date.now() - 4 * 3600000).toISOString() },
+  { id: 'inv-b', nombre: 'Tomate',              unidad: 'kg',  stockActual: 2.1, stockMinimo: 1,  stockIdeal: 4,   categoria: 'Verduras',    activo: true,  ultimoAjuste: null },
+  { id: 'inv-c', nombre: 'Cebolla caramelizada',unidad: 'kg',  stockActual: 0.3, stockMinimo: 0.5,stockIdeal: 2,   categoria: 'Verduras',    activo: true,  ultimoAjuste: new Date(Date.now() - 9 * 3600000).toISOString() },
+  // Bebidas
+  { id: 'inv-d', nombre: 'Gaseosa 350ml',       unidad: 'und', stockActual: 24,  stockMinimo: 12, stockIdeal: 48,  categoria: 'Bebidas',     activo: true,  ultimoAjuste: new Date(Date.now() - 2 * 3600000).toISOString() },
+  { id: 'inv-e', nombre: 'Agua 500ml',          unidad: 'und', stockActual: 6,   stockMinimo: 10, stockIdeal: 36,  categoria: 'Bebidas',     activo: true,  ultimoAjuste: null },
+  // Papas
+  { id: 'inv-f', nombre: 'Papa criolla',        unidad: 'kg',  stockActual: 5.5, stockMinimo: 3,  stockIdeal: 10,  categoria: 'Tubérculos',  activo: true,  ultimoAjuste: new Date(Date.now() - 1 * 3600000).toISOString() },
+];
+
+export const MOCK_AJUSTES: AjusteInventario[] = [
+  { id: 'aj-1', itemId: 'inv-1', itemNombre: 'Pan de hamburguesa', tipo: 'entrada', cantidad: 50,  motivo: 'Compra proveedor panadería', creadoPor: 'Ana Admin', createdAt: new Date(Date.now() - 2 * 3600000).toISOString() },
+  { id: 'aj-2', itemId: 'inv-3', itemNombre: 'Carne molida',       tipo: 'salida',  cantidad: 2.5, motivo: 'Uso en producción del día',  creadoPor: 'Ana Admin', createdAt: new Date(Date.now() - 1 * 3600000).toISOString() },
+  { id: 'aj-3', itemId: 'inv-9', itemNombre: 'Salsa BBQ',          tipo: 'ajuste',  cantidad: 0.4, motivo: 'Conteo físico de inventario',creadoPor: 'Ana Admin', createdAt: new Date(Date.now() - 12 * 3600000).toISOString() },
+  { id: 'aj-4', itemId: 'inv-7', itemNombre: 'Queso cheddar',      tipo: 'salida',  cantidad: 0.5, motivo: 'Uso en producción del día',  creadoPor: 'Ana Admin', createdAt: new Date(Date.now() - 6 * 3600000).toISOString() },
 ];
 
 // ─── Pedidos ──────────────────────────────────────────────────────────────────

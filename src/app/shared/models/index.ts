@@ -162,3 +162,28 @@ export interface PaginatedResponse<T> {
   page:  number;
   limit: number;
 }
+
+// ─── Inventario ──────────────────────────────────────────────────────────────
+
+export interface ItemInventario {
+  id:            string;
+  nombre:        string;
+  unidad:        string;       // 'kg' | 'g' | 'und' | 'lt' | 'ml'
+  stockActual:   number;
+  stockMinimo:   number;
+  stockIdeal:    number;
+  categoria:     string;
+  activo:        boolean;
+  ultimoAjuste:  string | null; // ISO date
+}
+
+export interface AjusteInventario {
+  id:          string;
+  itemId:      string;
+  itemNombre:  string;
+  tipo:        'entrada' | 'salida' | 'ajuste';
+  cantidad:    number;
+  motivo:      string;
+  creadoPor:   string;
+  createdAt:   string;
+}
