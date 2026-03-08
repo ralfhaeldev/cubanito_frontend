@@ -5,7 +5,7 @@ import {
   MOCK_CAJA, MOCK_MOVIMIENTOS,
   MOCK_VENTAS_DIARIAS, MOCK_PRODUCTOS_VENDIDOS, MOCK_CAJA_HISTORIAL,
 } from './mock.data';
-import { EstadoPedido, Pedido } from '../../shared/models';
+import { EstadoPedido, Pedido, Sede } from '../../shared/models';
 
 export const MOCKS_ENABLED = true;
 
@@ -14,6 +14,7 @@ let pedidos      = [...MOCK_PEDIDOS];
 let movimientos  = [...MOCK_MOVIMIENTOS];
 let caja         = { ...MOCK_CAJA };
 let usuarios     = MOCK_USUARIOS.map(({ password: _p, ...u }) => u);
+let sedes = [...MOCK_SEDES];
 
 const ok        = (body: unknown, ms = 250) => of(new HttpResponse({ status: 200, body })).pipe(delay(ms));
 const created   = (body: unknown)           => of(new HttpResponse({ status: 201, body })).pipe(delay(300));
@@ -45,21 +46,24 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
   if (method === 'GET' && path === 'sedes') return ok(MOCK_SEDES);
 
   // ── Productos ───────────────────────────────────────────────────────────────
-  if (method === 'GET'    && path === 'productos')       return ok(productos);
-  if (method === 'POST'   && path === 'productos') {
-    const body = req.body as { nombre: string; precioVenta: number; precioCompra: number };
-    const nuevo = { id: `p-${Date.now()}`, ...body, activo: true };
-    productos = [nuevo, ...productos];
-    return created(nuevo);
+  if (method === 'GET'  && path === 'sedes') return ok(sedes);
+
+  if (method === 'POST' && path === 'sedes') {
+    const body = req.body as { nombre: string };
+    const nueva: Sede = { id: `sede-${Date.now()}`, nombre: body.nombre, activa: true };
+    sedes = [...sedes, nueva];
+    return created(nueva);
   }
-  if (method === 'PATCH'  && path.startsWith('productos/')) {
+
+  if (method === 'PATCH' && path.startsWith('sedes/')) {
     const id = path.split('/')[1];
-    productos = productos.map((p) => p.id === id ? { ...p, ...(req.body as object) } : p);
-    return ok(productos.find((p) => p.id === id));
+    sedes = sedes.map((s) => s.id === id ? { ...s, ...(req.body as object) } : s);
+    return ok(sedes.find((s) => s.id === id));
   }
-  if (method === 'DELETE' && path.startsWith('productos/')) {
+
+  if (method === 'DELETE' && path.startsWith('sedes/')) {
     const id = path.split('/')[1];
-    productos = productos.map((p) => p.id === id ? { ...p, activo: false } : p);
+    sedes = sedes.filter((s) => s.id !== id);
     return noContent();
   }
 
