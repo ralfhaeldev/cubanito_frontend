@@ -1,32 +1,11 @@
-// ─── Roles ──────────────────────────────────────────────────────────────────
+// ─── Enums ────────────────────────────────────────────────────────────────────
 
 export enum Rol {
-  SuperAdmin   = 'super_admin',
-  AdminSede    = 'admin_sede',
-  Mesero       = 'mesero',
-  Cocina       = 'cocina',
+  SuperAdmin = 'super_admin',
+  AdminSede = 'admin_sede',
+  Mesero = 'mesero',
+  Cocina = 'cocina',
   Domiciliario = 'domiciliario',
-}
-
-// ─── Estados de pedido ──────────────────────────────────────────────────────
-
-export enum EstadoPedido {
-  Pendiente  = 'pendiente',
-  EnProceso  = 'en_proceso',
-  Enviado    = 'enviado',
-  Entregado  = 'entregado',
-  Finalizado = 'finalizado',
-  Rechazado  = 'rechazado',
-}
-
-export enum TipoPedido {
-  Local      = 'local',
-  Domicilio  = 'domicilio',
-}
-
-export enum MetodoPago {
-  Efectivo      = 'efectivo',
-  Transferencia = 'transferencia',
 }
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
@@ -51,139 +30,181 @@ export interface LoginResponse {
   };
 }
 
-// ─── Sede ────────────────────────────────────────────────────────────────────
+// ─── Estados de pedido ──────────────────────────────────────────────────────
 
-export interface Sede {
-  id:     string;
-  nombre: string;
-  activa: boolean;
+export enum EstadoPedido {
+  Pendiente = 'pendiente',
+  EnProceso = 'en_proceso',
+  Enviado = 'enviado',
+  Entregado = 'entregado',
+  Finalizado = 'finalizado',
+  Rechazado = 'rechazado',
 }
 
-// ─── Usuario ─────────────────────────────────────────────────────────────────
+export enum TipoPedido {
+  Local = 'local',
+  Domicilio = 'domicilio',
+}
 
-export interface Usuario {
-  id:     string;
+export enum MetodoPago {
+  Efectivo = 'efectivo',
+  Transferencia = 'transferencia',
+}
+
+export enum TipoMovimiento {
+  Ingreso = 'ingreso',
+  Egreso = 'egreso',
+  Gasto = 'gasto',
+}
+
+/**
+ * simple    → producto directo (ej: gaseosa). Tiene stock propio vinculado a un ítem de inventario.
+ * preparado → producto elaborado (ej: cubanito). Descuenta ingredientes del inventario al venderse.
+ */
+export enum TipoProducto {
+  Simple = 'simple',
+  Preparado = 'preparado',
+}
+
+// ─── Inventario ───────────────────────────────────────────────────────────────
+
+export interface ItemInventario {
+  id: string;
   nombre: string;
-  email:  string;
-  rol:    Rol;
+  unidad: string; // 'kg' | 'g' | 'und' | 'lt' | 'ml'
+  stockActual: number;
+  stockMinimo: number;
+  stockIdeal: number;
+  categoria: string;
   activo: boolean;
+  ultimoAjuste: string | null; // ISO date
 }
 
-// ─── Producto ────────────────────────────────────────────────────────────────
+export interface AjusteInventario {
+  id: string;
+  itemId: string;
+  itemNombre: string;
+  tipo: 'entrada' | 'salida' | 'ajuste';
+  cantidad: number;
+  motivo: string;
+  creadoPor: string;
+  createdAt: string;
+}
+
+// ─── Ingrediente (para productos preparados) ──────────────────────────────────
+
+export interface Ingrediente {
+  itemInventarioId: string;
+  itemNombre: string;
+  cantidad: number; // cantidad por unidad del producto
+  unidad: string;
+}
+
+// ─── Producto ─────────────────────────────────────────────────────────────────
 
 export interface Producto {
-  id:            string;
-  nombre:        string;
-  precioVenta:   number;
-  precioCompra:  number;
-  activo:        boolean;
+  id: string;
+  nombre: string;
+  precioVenta: number;
+  precioCompra: number; // para 'simple' es el precio de compra directo;
+  // para 'preparado' se calcula a partir de los ingredientes
+  activo: boolean;
+
+  // ── Nuevos campos ──────────────────────────────────────────────────
+  tipo: TipoProducto;
+  itemInventarioId?: string; // solo si tipo === 'simple'
+  ingredientes?: Ingrediente[]; // solo si tipo === 'preparado'
 }
 
-// ─── Pedido ──────────────────────────────────────────────────────────────────
+// ─── Pedido ───────────────────────────────────────────────────────────────────
 
 export interface PedidoItem {
-  id:              string;
-  productoId:      string;
-  productoNombre:  string;
-  cantidad:        number;
-  precioUnitario:  number;
-  subtotal:        number;
+  id: string;
+  productoId: string;
+  productoNombre: string;
+  cantidad: number;
+  precioUnitario: number;
+  subtotal: number;
 }
 
 export interface ClienteDomicilio {
-  nombre:    string;
-  telefono:  string;
+  nombre: string;
+  telefono: string;
   direccion: string;
 }
 
 export interface Pedido {
-  id:                string;
-  tipo:              TipoPedido;
-  estado:            EstadoPedido;
-  items:             PedidoItem[];
+  id: string;
+  tipo: TipoPedido;
+  estado: EstadoPedido;
+  items: PedidoItem[];
+  total: number;
+  meseroId: string;
+  meseroNombre: string;
   clienteDomicilio?: ClienteDomicilio;
-  total:             number;
-  meseroId:          string;
-  meseroNombre:      string;
-  createdAt:         string;
-  updatedAt:         string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-// ─── Pago ────────────────────────────────────────────────────────────────────
-
-export interface Pago {
-  id:         string;
-  pedidoId:   string;
-  metodo:     MetodoPago;
-  monto:      number;
-  vuelto?:    number;
-  createdAt:  string;
-}
-
-// ─── Caja ────────────────────────────────────────────────────────────────────
+// ─── Caja & Movimientos ───────────────────────────────────────────────────────
 
 export interface Caja {
-  id:           string;
-  fecha:        string;
+  id: string;
+  fecha: string;
   montoInicial: number;
-  montoFinal?:  number;
-  abierta:      boolean;
-  abiertaPor:   string;
-  cerradaPor?:  string;
-}
-
-// ─── Movimiento ──────────────────────────────────────────────────────────────
-
-export enum TipoMovimiento {
-  Ingreso = 'ingreso',
-  Egreso  = 'egreso',
-  Gasto   = 'gasto',
+  montoFinal?: number;
+  abierta: boolean;
+  abiertaPor: string;
+  cerradaPor?: string;
 }
 
 export interface Movimiento {
-  id:          string;
-  cajaId:      string;
-  tipo:        TipoMovimiento;
-  monto:       number;
+  id: string;
+  cajaId: string;
+  tipo: TipoMovimiento;
+  monto: number;
   descripcion: string;
-  createdAt:   string;
+  createdAt: string;
 }
 
-// ─── Utilidades ──────────────────────────────────────────────────────────────
+// ─── Usuarios & Sedes ─────────────────────────────────────────────────────────
 
-export interface ApiResponse<T> {
-  data:    T;
-  message: string;
+export interface Usuario {
+  id: string;
+  nombre: string;
+  email: string;
+  rol: Rol;
+  activo: boolean;
 }
 
-export interface PaginatedResponse<T> {
-  data:  T[];
-  total: number;
-  page:  number;
-  limit: number;
+export interface Sede {
+  id: string;
+  nombre: string;
+  activa: boolean;
 }
 
-// ─── Inventario ──────────────────────────────────────────────────────────────
+// ─── Reportes ────────────────────────────────────────────────────────────────
 
-export interface ItemInventario {
-  id:            string;
-  nombre:        string;
-  unidad:        string;       // 'kg' | 'g' | 'und' | 'lt' | 'ml'
-  stockActual:   number;
-  stockMinimo:   number;
-  stockIdeal:    number;
-  categoria:     string;
-  activo:        boolean;
-  ultimoAjuste:  string | null; // ISO date
+export interface VentaDiaria {
+  fecha: string;
+  ventas: number;
+  pedidos: number;
+  domicilios: number;
 }
 
-export interface AjusteInventario {
-  id:          string;
-  itemId:      string;
-  itemNombre:  string;
-  tipo:        'entrada' | 'salida' | 'ajuste';
-  cantidad:    number;
-  motivo:      string;
-  creadoPor:   string;
-  createdAt:   string;
+export interface ProductoVendido {
+  nombre: string;
+  cantidad: number;
+  ingresos: number;
+}
+
+export interface CajaHistorial {
+  id: string;
+  fecha: string;
+  montoInicial: number;
+  montoFinal: number | null;
+  ingresos: number;
+  egresos: number;
+  abierta: boolean;
+  abiertaPor: string;
 }

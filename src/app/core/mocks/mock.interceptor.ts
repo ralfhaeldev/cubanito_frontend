@@ -7,16 +7,17 @@ import {
   MOCK_PEDIDOS,
   MOCK_CAJA,
   MOCK_MOVIMIENTOS,
+  MOCK_INVENTARIO,
+  MOCK_AJUSTES,
   MOCK_VENTAS_DIARIAS,
   MOCK_PRODUCTOS_VENDIDOS,
   MOCK_CAJA_HISTORIAL,
-  MOCK_INVENTARIO,
-  MOCK_AJUSTES,
 } from './mock.data';
-import { EstadoPedido, Pedido, Sede } from '../../shared/models';
+import { EstadoPedido, Pedido, TipoProducto } from '../../shared/models';
 
 export const MOCKS_ENABLED = true;
 
+// ─── Estado mutable en memoria ────────────────────────────────────────────────
 let productos = [...MOCK_PRODUCTOS];
 let pedidos = [...MOCK_PEDIDOS];
 let movimientos = [...MOCK_MOVIMIENTOS];
@@ -26,6 +27,7 @@ let sedes = [...MOCK_SEDES];
 let inventario = [...MOCK_INVENTARIO];
 let ajustes = [...MOCK_AJUSTES];
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 const ok = (body: unknown, ms = 250) => of(new HttpResponse({ status: 200, body })).pipe(delay(ms));
 const created = (body: unknown) => of(new HttpResponse({ status: 201, body })).pipe(delay(300));
 const noContent = () => of(new HttpResponse({ status: 204 })).pipe(delay(200));
@@ -38,6 +40,63 @@ function makeJwt(payload: Record<string, unknown>): string {
   return `${header}.${body}.mock_signature`;
 }
 
+function descontarInventario(pedido: Pedido): void {
+  const now = new Date().toISOString();
+
+  for (const item of pedido.items) {
+    const producto = productos.find((p) => p.id === item.productoId);
+    if (!producto) continue;
+
+    if (producto.tipo === TipoProducto.Simple && producto.itemInventarioId) {
+      const descuento = item.cantidad;
+      inventario = inventario.map((inv) =>
+        inv.id === producto.itemInventarioId
+          ? { ...inv, stockActual: Math.max(0, inv.stockActual - descuento), ultimoAjuste: now }
+          : inv,
+      );
+      ajustes = [
+        {
+          id: `aj-${Date.now()}-${item.productoId}`,
+          itemId: producto.itemInventarioId,
+          itemNombre:
+            inventario.find((i) => i.id === producto.itemInventarioId)?.nombre ?? producto.nombre,
+          tipo: 'salida' as const,
+          cantidad: descuento,
+          motivo: `Venta — pedido #${pedido.id.slice(-6).toUpperCase()}`,
+          creadoPor: 'Sistema',
+          createdAt: now,
+        },
+        ...ajustes,
+      ];
+    }
+
+    if (producto.tipo === TipoProducto.Preparado && producto.ingredientes?.length) {
+      for (const ing of producto.ingredientes) {
+        const descuento = ing.cantidad * item.cantidad;
+        inventario = inventario.map((inv) =>
+          inv.id === ing.itemInventarioId
+            ? { ...inv, stockActual: Math.max(0, inv.stockActual - descuento), ultimoAjuste: now }
+            : inv,
+        );
+        ajustes = [
+          {
+            id: `aj-${Date.now()}-${ing.itemInventarioId}`,
+            itemId: ing.itemInventarioId,
+            itemNombre: ing.itemNombre,
+            tipo: 'salida' as const,
+            cantidad: descuento,
+            motivo: `Venta — pedido #${pedido.id.slice(-6).toUpperCase()} (${producto.nombre})`,
+            creadoPor: 'Sistema',
+            createdAt: now,
+          },
+          ...ajustes,
+        ];
+      }
+    }
+  }
+}
+
+// ─── Interceptor ──────────────────────────────────────────────────────────────
 export const mockInterceptor: HttpInterceptorFn = (req, next) => {
   if (!MOCKS_ENABLED) return next(req);
 
@@ -45,7 +104,7 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
   const path = req.url.replace(/^https?:\/\/[^/]+\//, '').split('?')[0];
   const params = new URL(req.url, 'http://localhost').searchParams;
 
-  // ── Auth ────────────────────────────────────────────────────────────────────
+  // ── Auth ───────────────────────────────────────────────────────────────────
   if (method === 'POST' && path === 'auth/login') {
     const { email, password } = req.body as { email: string; password: string };
     const user = MOCK_USUARIOS.find((u) => u.email === email && u.password === password);
@@ -66,89 +125,50 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
     });
   }
 
-  // ── Sedes ───────────────────────────────────────────────────────────────────
-  if (method === 'GET' && path === 'sedes') return ok(MOCK_SEDES);
-
-  // ── Productos ───────────────────────────────────────────────────────────────
+  // ── Sedes ──────────────────────────────────────────────────────────────────
   if (method === 'GET' && path === 'sedes') return ok(sedes);
-
   if (method === 'POST' && path === 'sedes') {
     const body = req.body as { nombre: string };
-    const nueva: Sede = { id: `sede-${Date.now()}`, nombre: body.nombre, activa: true };
+    const nueva = { id: `sede-${Date.now()}`, nombre: body.nombre, activa: true };
     sedes = [...sedes, nueva];
     return created(nueva);
   }
-
   if (method === 'PATCH' && path.startsWith('sedes/')) {
     const id = path.split('/')[1];
     sedes = sedes.map((s) => (s.id === id ? { ...s, ...(req.body as object) } : s));
     return ok(sedes.find((s) => s.id === id));
   }
-
   if (method === 'DELETE' && path.startsWith('sedes/')) {
     const id = path.split('/')[1];
     sedes = sedes.filter((s) => s.id !== id);
     return noContent();
   }
 
-  // ── Inventario ────────────────────────────────────────────────────────────
-
-  // GET /inventario
-  if (method === 'GET' && path === 'inventario') return ok(inventario, 300);
-
-  // POST /inventario  (crear ítem)
-  if (method === 'POST' && path === 'inventario') {
-    const body = req.body as any;
-    const nuevo = { id: `inv-${Date.now()}`, ...body, ultimoAjuste: null };
-    inventario = [nuevo, ...inventario];
+  // ── Productos ──────────────────────────────────────────────────────────────
+  if (method === 'GET' && path === 'productos') return ok(productos);
+  if (method === 'POST' && path === 'productos') {
+    const body = req.body as (typeof productos)[0];
+    const nuevo = { ...body, id: `p-${Date.now()}`, activo: true };
+    productos = [nuevo, ...productos];
     return created(nuevo);
   }
-
-  // PATCH /inventario/:id
-  if (method === 'PATCH' && path.startsWith('inventario/') && path.split('/').length === 2) {
+  if (method === 'PATCH' && path.startsWith('productos/')) {
     const id = path.split('/')[1];
-    inventario = inventario.map((i) => (i.id === id ? { ...i, ...(req.body as object) } : i));
-    return ok(inventario.find((i) => i.id === id));
+    productos = productos.map((p) => (p.id === id ? { ...p, ...(req.body as object) } : p));
+    return ok(productos.find((p) => p.id === id));
+  }
+  if (method === 'DELETE' && path.startsWith('productos/')) {
+    const id = path.split('/')[1];
+    productos = productos.map((p) => (p.id === id ? { ...p, activo: false } : p));
+    return noContent();
   }
 
-  // GET /inventario/ajustes
-  if (method === 'GET' && path === 'inventario/ajustes') return ok(ajustes, 300);
-
-  // POST /inventario/ajustes  (registrar movimiento de stock)
-  if (method === 'POST' && path === 'inventario/ajustes') {
-    const body = req.body as { itemId: string; tipo: string; cantidad: number; motivo: string };
-    const item = inventario.find((i) => i.id === body.itemId);
-    if (!item) return of(new HttpResponse({ status: 404 }));
-
-    // Actualizar stock según tipo
-    let nuevoStock = item.stockActual;
-    if (body.tipo === 'entrada') nuevoStock += body.cantidad;
-    else if (body.tipo === 'salida') nuevoStock = Math.max(0, nuevoStock - body.cantidad);
-    else if (body.tipo === 'ajuste') nuevoStock = body.cantidad; // ajuste = valor absoluto
-
-    const now = new Date().toISOString();
-    inventario = inventario.map((i) =>
-      i.id === body.itemId ? { ...i, stockActual: nuevoStock, ultimoAjuste: now } : i,
-    );
-
-    const nuevoAjuste: any = {
-      id: `aj-${Date.now()}`,
-      ...body,
-      itemNombre: item.nombre,
-      creadoPor: 'Ana Admin',
-      createdAt: now,
-    };
-    ajustes = [nuevoAjuste, ...ajustes];
-    return created(nuevoAjuste);
-  }
-
-  // ── Pedidos ──────────────────────────────────────────────────────────────────
+  // ── Pedidos ────────────────────────────────────────────────────────────────
   if (method === 'GET' && path === 'pedidos') return ok(pedidos);
-  if (method === 'GET' && path === 'pedidos/activos') {
+  if (method === 'GET' && path === 'pedidos/activos')
     return ok(
       pedidos.filter((p) => ![EstadoPedido.Finalizado, EstadoPedido.Rechazado].includes(p.estado)),
     );
-  }
   if (method === 'GET' && path.startsWith('pedidos/') && path.split('/').length === 2) {
     return ok(pedidos.find((p) => p.id === path.split('/')[1]) ?? null);
   }
@@ -179,15 +199,30 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
   }
   if (method === 'POST' && path.match(/^pedidos\/[^/]+\/finalizar$/)) {
     const id = path.split('/')[1];
-    pedidos = pedidos.map((p) =>
-      p.id === id
-        ? { ...p, estado: EstadoPedido.Finalizado, updatedAt: new Date().toISOString() }
-        : p,
-    );
+    const pedido = pedidos.find((p) => p.id === id);
+    if (pedido) {
+      descontarInventario(pedido);
+      pedidos = pedidos.map((p) =>
+        p.id === id
+          ? { ...p, estado: EstadoPedido.Finalizado, updatedAt: new Date().toISOString() }
+          : p,
+      );
+      movimientos = [
+        {
+          id: `mov-${Date.now()}`,
+          cajaId: caja.id,
+          tipo: 'ingreso' as any,
+          monto: pedido.total,
+          descripcion: `Pago pedido #${id.slice(-6).toUpperCase()}`,
+          createdAt: new Date().toISOString(),
+        },
+        ...movimientos,
+      ];
+    }
     return ok({ success: true });
   }
 
-  // ── Caja ─────────────────────────────────────────────────────────────────────
+  // ── Caja ───────────────────────────────────────────────────────────────────
   if (method === 'GET' && path === 'caja') return ok(caja);
   if (method === 'POST' && path === 'caja/abrir') {
     const { montoInicial } = req.body as { montoInicial: number };
@@ -198,6 +233,7 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
       abierta: true,
       abiertaPor: 'u-2',
     };
+    movimientos = [];
     return created(caja);
   }
   if (method === 'POST' && path === 'caja/cerrar') {
@@ -206,7 +242,7 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
     return ok(caja);
   }
 
-  // ── Movimientos ───────────────────────────────────────────────────────────────
+  // ── Movimientos ────────────────────────────────────────────────────────────
   if (method === 'GET' && path === 'movimientos') return ok(movimientos);
   if (method === 'POST' && path === 'movimientos') {
     const body = req.body as { tipo: string; monto: number; descripcion: string };
@@ -214,39 +250,76 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
       id: `mov-${Date.now()}`,
       cajaId: caja.id,
       ...body,
-      createdAt: new Date().toISOString(),
       tipo: body.tipo as any,
+      createdAt: new Date().toISOString(),
     };
     movimientos = [nuevo, ...movimientos];
     return created(nuevo);
   }
 
-  // ── Usuarios ──────────────────────────────────────────────────────────────────
+  // ── Usuarios ───────────────────────────────────────────────────────────────
   if (method === 'GET' && path === 'usuarios') return ok(usuarios);
-
   if (method === 'POST' && path === 'usuarios') {
     const body = req.body as any;
     const nuevo = { id: `u-${Date.now()}`, ...body, activo: true };
     usuarios = [nuevo, ...usuarios];
     return created(nuevo);
   }
-
   if (method === 'PATCH' && path.startsWith('usuarios/')) {
     const id = path.split('/')[1];
     usuarios = usuarios.map((u) => (u.id === id ? { ...u, ...(req.body as object) } : u));
     return ok(usuarios.find((u) => u.id === id));
   }
 
-  // ── Reportes ──────────────────────────────────────────────────────────────────
+  // ── Inventario ─────────────────────────────────────────────────────────────
+  if (method === 'GET' && path === 'inventario') return ok(inventario, 300);
+  if (method === 'POST' && path === 'inventario') {
+    const body = req.body as any;
+    const nuevo = { id: `inv-${Date.now()}`, ...body, ultimoAjuste: null };
+    inventario = [nuevo, ...inventario];
+    return created(nuevo);
+  }
+  if (method === 'PATCH' && path.startsWith('inventario/') && path.split('/').length === 2) {
+    const id = path.split('/')[1];
+    inventario = inventario.map((i) => (i.id === id ? { ...i, ...(req.body as object) } : i));
+    return ok(inventario.find((i) => i.id === id));
+  }
+  if (method === 'GET' && path === 'inventario/ajustes') return ok(ajustes, 300);
+  if (method === 'POST' && path === 'inventario/ajustes') {
+    const body = req.body as {
+      itemId: string;
+      tipo: 'entrada' | 'salida' | 'ajuste';
+      cantidad: number;
+      motivo: string;
+    };
+    const item = inventario.find((i) => i.id === body.itemId);
+    if (!item) return of(new HttpResponse({ status: 404 }));
+    const now = new Date().toISOString();
+    let nuevoStock = item.stockActual;
+    if (body.tipo === 'entrada') nuevoStock += body.cantidad;
+    else if (body.tipo === 'salida') nuevoStock = Math.max(0, nuevoStock - body.cantidad);
+    else nuevoStock = body.cantidad;
+    inventario = inventario.map((i) =>
+      i.id === body.itemId ? { ...i, stockActual: nuevoStock, ultimoAjuste: now } : i,
+    );
+    const nuevoAjuste = {
+      id: `aj-${Date.now()}`,
+      ...body,
+      itemNombre: item.nombre,
+      creadoPor: 'Ana Admin',
+      createdAt: now,
+    };
+    ajustes = [nuevoAjuste, ...ajustes];
+    return created(nuevoAjuste);
+  }
 
-  // GET /reportes/ventas?periodo=7d|30d|today
+  // ── Reportes ───────────────────────────────────────────────────────────────
   if (method === 'GET' && path === 'reportes/ventas') {
     const periodo = params.get('periodo') ?? '7d';
     let dias = MOCK_VENTAS_DIARIAS;
-    if (periodo === 'today') dias = MOCK_VENTAS_DIARIAS.slice(-1);
-    else if (periodo === '7d') dias = MOCK_VENTAS_DIARIAS;
-    else if (periodo === '30d') {
-      // Repetir los datos para simular 30 días
+    if (periodo === 'today') {
+      dias = MOCK_VENTAS_DIARIAS.slice(-1);
+    } else if (periodo === '30d') {
       const extended = [];
       for (let i = 29; i >= 0; i--) {
         const base = MOCK_VENTAS_DIARIAS[i % 7];
@@ -264,29 +337,21 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
     }
     return ok(dias, 400);
   }
-
-  // GET /reportes/productos-top?periodo=7d|30d
   if (method === 'GET' && path === 'reportes/productos-top') {
-    const periodo = params.get('periodo') ?? '7d';
-    const factor = periodo === '30d' ? 4.2 : 1;
-    const datos = MOCK_PRODUCTOS_VENDIDOS.map((p) => ({
-      ...p,
-      cantidad: Math.round(p.cantidad * factor),
-      ingresos: Math.round(p.ingresos * factor),
-    }));
-    return ok(datos, 400);
+    const factor = params.get('periodo') === '30d' ? 4.2 : 1;
+    return ok(
+      MOCK_PRODUCTOS_VENDIDOS.map((p) => ({
+        ...p,
+        cantidad: Math.round(p.cantidad * factor),
+        ingresos: Math.round(p.ingresos * factor),
+      })),
+      400,
+    );
   }
-
-  // GET /reportes/caja-historial
-  if (method === 'GET' && path === 'reportes/caja-historial') {
-    return ok(MOCK_CAJA_HISTORIAL, 400);
-  }
-
-  // GET /reportes/resumen?periodo=7d|30d|today
+  if (method === 'GET' && path === 'reportes/caja-historial') return ok(MOCK_CAJA_HISTORIAL, 400);
   if (method === 'GET' && path === 'reportes/resumen') {
     const periodo = params.get('periodo') ?? '7d';
-    const ventas = MOCK_VENTAS_DIARIAS;
-    const slice = periodo === 'today' ? ventas.slice(-1) : periodo === '7d' ? ventas : ventas;
+    const slice = periodo === 'today' ? MOCK_VENTAS_DIARIAS.slice(-1) : MOCK_VENTAS_DIARIAS;
     const factor = periodo === '30d' ? 4.2 : 1;
     return ok(
       {
