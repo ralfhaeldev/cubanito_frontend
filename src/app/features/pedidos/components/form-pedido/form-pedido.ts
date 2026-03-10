@@ -1,6 +1,7 @@
 import {
   Component, output, inject, signal, computed,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { CopPipe } from '../../../../shared/pipes/cop.pipe';
@@ -239,6 +240,10 @@ export class FormPedido {
     direccion: ['', Validators.required],
   });
 
+  private clienteStatus = toSignal(this.clienteForm.statusChanges, {
+    initialValue: this.clienteForm.status,
+  });
+
   constructor() {
     this.http
       .get<Producto[]>(`${environment.apiUrl}/productos`)
@@ -260,7 +265,7 @@ export class FormPedido {
   formularioValido = computed(() => {
     if (this.carrito().length === 0) return false;
     if (this.tipoSeleccionado() === TipoPedido.Domicilio) {
-      return this.clienteForm.valid;
+      return this.clienteStatus() === 'VALID';
     }
     return true;
   });
