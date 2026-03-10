@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { forkJoin } from 'rxjs';
 import { FormAjusteInventario, ItemInventario, AjusteInventario } from '../form-ajuste-inventario/form-ajuste-inventario';
+import { FormItemInventario } from '../form-item-inventario/form-item-inventario';
 import { environment } from '../../../../../environments/environment';
 
 type FiltroStock = 'todos' | 'critico' | 'bajo' | 'ok';
@@ -10,7 +11,7 @@ type FiltroStock = 'todos' | 'critico' | 'bajo' | 'ok';
 @Component({
   selector: 'app-lista-inventario',
   standalone: true,
-  imports: [DatePipe, DecimalPipe, FormAjusteInventario],
+  imports: [DatePipe, DecimalPipe, FormAjusteInventario, FormItemInventario],
   template: `
     <div class="flex flex-col h-full">
 
@@ -35,6 +36,14 @@ type FiltroStock = 'todos' | 'critico' | 'bajo' | 'ok';
                 }
               </p>
             </div>
+            <button
+              class="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand text-white text-sm
+                     font-semibold hover:bg-brand/90 transition-all active:scale-95"
+              (click)="mostrarFormItem.set(true)"
+            >
+              <span class="material-symbols-outlined text-base">add</span>
+              Nuevo ítem
+            </button>
           </div>
 
           <!-- KPIs -->
@@ -239,6 +248,14 @@ type FiltroStock = 'todos' | 'critico' | 'bajo' | 'ok';
         (guardado)="onAjusteGuardado($event)"
       />
     }
+
+    <!-- Modal nuevo ítem -->
+    @if (mostrarFormItem()) {
+      <app-form-item-inventario
+        (cerrar)="mostrarFormItem.set(false)"
+        (guardado)="onItemCreado($event)"
+      />
+    }
   `,
 })
 export class ListaInventario implements OnInit {
@@ -253,7 +270,8 @@ export class ListaInventario implements OnInit {
   filtroStock     = signal<FiltroStock>('todos');
   verHistorial    = signal(false);
   itemSeleccionado = signal<ItemInventario | null>(null);
-  itemAjustando   = signal<ItemInventario | null>(null);
+  itemAjustando    = signal<ItemInventario | null>(null);
+  mostrarFormItem  = signal(false);
 
   // ─── Computed ─────────────────────────────────────────────────────────────
 
@@ -386,6 +404,11 @@ export class ListaInventario implements OnInit {
   abrirAjuste(event: Event, item: ItemInventario): void {
     event.stopPropagation();
     this.itemAjustando.set(item);
+  }
+
+  onItemCreado(item: ItemInventario): void {
+    this.items.update((list) => [item, ...list]);
+    this.mostrarFormItem.set(false);
   }
 
   onAjusteGuardado(aj: AjusteInventario): void {
