@@ -54,6 +54,18 @@ ng e2e
 
 Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
 
+## Credenciales mock para pruebas
+
+El modo mock está activo por defecto (`MOCKS_ENABLED = true` en `src/app/core/mocks/mock.interceptor.ts`). Todas las cuentas usan la contraseña `1234`.
+
+| Nombre | Email | Contraseña | Rol | Acceso |
+|---|---|---|---|---|
+| Carlos Super | `superadmin@test.com` | `1234` | Super Admin | Dashboard, pedidos, reportes, sedes |
+| Ana Admin | `admin@sede1.com` | `1234` | Admin Sede | Dashboard, pedidos, productos, inventario, caja, reportes, usuarios |
+| Pedro Mesero | `mesero@sede1.com` | `1234` | Mesero | Pedidos |
+| Luis Cocina | `cocina@sede1.com` | `1234` | Cocina | Vista cocina (pantalla completa) |
+| Mario Domicilio | `domiciliario@sede1.com` | `1234` | Domiciliario | Vista domiciliario (pantalla completa) |
+
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
