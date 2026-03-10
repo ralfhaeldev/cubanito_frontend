@@ -1,4 +1,5 @@
 import { Component, input, output, inject, signal, computed } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
@@ -393,6 +394,8 @@ export class DetallePedido {
     montoRecibido: [null as number | null],
   });
 
+  private pagoValues = toSignal(this.pagoForm.valueChanges, { initialValue: this.pagoForm.value });
+
   // ─── Timeline ─────────────────────────────────────────────────────────────
 
   timelineVisible = computed(() =>
@@ -465,16 +468,15 @@ export class DetallePedido {
   // ─── Vuelto ───────────────────────────────────────────────────────────────
 
   vuelto = computed(() => {
-    const monto = this.pagoForm.get('montoRecibido')?.value;
+    const monto = this.pagoValues().montoRecibido;
     if (!monto) return null;
-    return (monto as number) - this.pedido().total;
+    return monto - this.pedido().total;
   });
 
   pagoValido = computed(() => {
-    const metodo = this.pagoForm.get('metodo')?.value;
+    const { metodo, montoRecibido } = this.pagoValues();
     if (metodo === MetodoPago.Transferencia) return true;
-    const monto = this.pagoForm.get('montoRecibido')?.value as number | null;
-    return monto !== null && monto >= this.pedido().total;
+    return montoRecibido !== null && montoRecibido !== undefined && montoRecibido >= this.pedido().total;
   });
 
   // ─── Acciones ─────────────────────────────────────────────────────────────
