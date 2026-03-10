@@ -32,6 +32,7 @@ export class AuthService {
   readonly isLoggedIn = computed(() => !!this._currentUser());
   readonly rol = computed(() => this._currentUser()?.rol ?? null);
   readonly sedeId = computed(() => this._currentUser()?.sedeId ?? null);
+  readonly isOwner = computed(() => this._currentUser()?.rol === Rol.Owner);
   readonly isSuperAdmin = computed(() => this._currentUser()?.rol === Rol.SuperAdmin);
 
   constructor(
@@ -84,6 +85,8 @@ export class AuthService {
 
   getHomeRoute(): string {
     switch (this.rol()) {
+      case Rol.Owner:
+        return '/dashboard';
       case Rol.SuperAdmin:
         return '/dashboard';
       case Rol.AdminSede:
@@ -114,5 +117,10 @@ export class AuthService {
       default:
         return '/dashboard';
     }
+  }
+
+  isGlobalRole(): boolean {
+    const r = this.rol();
+    return r === Rol.Owner || r === Rol.SuperAdmin;
   }
 }

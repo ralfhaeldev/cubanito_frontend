@@ -60,7 +60,8 @@ El modo mock está activo por defecto (`MOCKS_ENABLED = true` en `src/app/core/m
 
 | Nombre | Email | Contraseña | Rol | Acceso |
 |---|---|---|---|---|
-| Carlos Super | `superadmin@test.com` | `1234` | Super Admin | Dashboard, pedidos, reportes, sedes |
+| Owner Plataforma | `owner@plataforma.com` | `1234` | Owner | Dashboard, reportes, sedes (crear / gestionar) |
+| Carlos Super | `superadmin@test.com` | `1234` | Super Admin | Dashboard, reportes |
 | Ana Admin | `admin@sede1.com` | `1234` | Admin Sede | Dashboard, pedidos, productos, inventario, caja, reportes, usuarios |
 | Pedro Mesero | `mesero@sede1.com` | `1234` | Mesero | Pedidos |
 | Luis Cocina | `cocina@sede1.com` | `1234` | Cocina | Vista cocina (pantalla completa) |

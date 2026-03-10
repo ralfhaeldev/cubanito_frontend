@@ -33,7 +33,8 @@ El sistema tiene cinco roles. Cada rol accede únicamente a las secciones que ne
 
 | Rol | Ruta inicial | Módulos accesibles |
 |---|---|---|
-| **Super Admin** | `/dashboard` | Dashboard · Reportes · Sedes |
+| **Owner** | `/dashboard` | Dashboard · Reportes · Sedes (crear / gestionar) |
+| **Super Admin** | `/dashboard` | Dashboard · Reportes |
 | **Admin Sede** | `/dashboard` | Dashboard · Pedidos · Productos · Inventario · Caja · Reportes · Usuarios |
 | **Mesero** | `/pedidos` | Pedidos (sin pestaña Finalizados) |
 | **Cocina** | `/cocina` | Vista Cocina (pantalla completa) |
@@ -42,7 +43,8 @@ El sistema tiene cinco roles. Cada rol accede únicamente a las secciones que ne
 **Reglas importantes:**
 - Un usuario sin sesión activa es redirigido a `/auth/login`.
 - Un usuario autenticado que intenta acceder a una ruta que no le corresponde es redirigido a su página de inicio.
-- El **Super Admin** no tiene `sedeId` — opera de forma global y selecciona la sede activa desde el dashboard.
+- El **Owner** es el único que puede crear y gestionar sedes — acción comercial reservada para la empresa proveedora del software.
+- El **Super Admin** y el **Owner** no tienen `sedeId` — operan de forma global y seleccionan la sede activa desde el dashboard.
 - El **Admin Sede** tiene su sede fijada en el JWT y solo gestiona esa sede.
 
 ---
@@ -53,6 +55,7 @@ Todas las cuentas usan la contraseña `1234`. El modo mock está activo por defe
 
 | Usuario | Email | Rol |
 |---|---|---|
+| Owner Plataforma | `owner@plataforma.com` | Owner |
 | Carlos Super | `superadmin@test.com` | Super Admin |
 | Ana Admin | `admin@sede1.com` | Admin Sede |
 | Pedro Mesero | `mesero@sede1.com` | Mesero |

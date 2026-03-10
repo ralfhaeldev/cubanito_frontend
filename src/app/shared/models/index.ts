@@ -1,6 +1,7 @@
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
 export enum Rol {
+  Owner = 'owner',
   SuperAdmin = 'super_admin',
   AdminSede = 'admin_sede',
   Mesero = 'mesero',

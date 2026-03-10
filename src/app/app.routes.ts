@@ -19,7 +19,7 @@ export const routes: Routes = [
 
       {
         path: 'dashboard',
-        canActivate: [() => roleGuard([Rol.SuperAdmin, Rol.AdminSede])],
+        canActivate: [() => roleGuard([Rol.Owner, Rol.SuperAdmin, Rol.AdminSede])],
         loadChildren: () => import('./features/dashboard/dashboard.routes').then((m) => m.DASHBOARD_ROUTES),
       },
       {
@@ -44,7 +44,7 @@ export const routes: Routes = [
       },
       {
         path: 'reportes',
-        canActivate: [() => roleGuard([Rol.SuperAdmin, Rol.AdminSede])],
+        canActivate: [() => roleGuard([Rol.Owner, Rol.SuperAdmin, Rol.AdminSede])],
         loadChildren: () => import('./features/reportes/reportes.routes').then((m) => m.REPORTES_ROUTES),
       },
       {
@@ -54,7 +54,7 @@ export const routes: Routes = [
       },
       {
         path: 'sedes',
-        canActivate: [() => roleGuard([Rol.SuperAdmin])],
+        canActivate: [() => roleGuard([Rol.Owner])],
         loadChildren: () => import('./features/sedes/sedes.routes').then((m) => m.SEDES_ROUTES),
       },
     ],

@@ -28,7 +28,7 @@ export class TenantService {
    * - Otros roles → viene del JWT
    */
   getEffectiveSedeId(): string | null {
-    return this.auth.isSuperAdmin()
+    return this.auth.isGlobalRole()
       ? this._activeSede()?.id ?? null
       : this.auth.sedeId();
   }

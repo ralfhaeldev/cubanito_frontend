@@ -14,11 +14,12 @@ interface RolMeta {
 }
 
 const ROL_META: Record<Rol, RolMeta> = {
-  [Rol.SuperAdmin]:    { label: 'Super Admin',  icon: 'shield',           color: 'text-purple-700', bg: 'bg-purple-50',  ring: 'ring-purple-200' },
-  [Rol.AdminSede]:     { label: 'Admin Sede',   icon: 'manage_accounts',  color: 'text-blue-700',   bg: 'bg-blue-50',    ring: 'ring-blue-200'   },
-  [Rol.Mesero]:        { label: 'Mesero',        icon: 'restaurant',       color: 'text-orange-600', bg: 'bg-orange-50',  ring: 'ring-orange-200' },
-  [Rol.Cocina]:        { label: 'Cocina',        icon: 'cooking',          color: 'text-amber-700',  bg: 'bg-amber-50',   ring: 'ring-amber-200'  },
-  [Rol.Domiciliario]:  { label: 'Domiciliario',  icon: 'delivery_dining',  color: 'text-indigo-700', bg: 'bg-indigo-50',  ring: 'ring-indigo-200' },
+  [Rol.Owner]:         { label: 'Owner',         icon: 'workspace_premium', color: 'text-rose-700',   bg: 'bg-rose-50',    ring: 'ring-rose-200'   },
+  [Rol.SuperAdmin]:    { label: 'Super Admin',   icon: 'shield',            color: 'text-purple-700', bg: 'bg-purple-50',  ring: 'ring-purple-200' },
+  [Rol.AdminSede]:     { label: 'Admin Sede',    icon: 'manage_accounts',   color: 'text-blue-700',   bg: 'bg-blue-50',    ring: 'ring-blue-200'   },
+  [Rol.Mesero]:        { label: 'Mesero',         icon: 'restaurant',        color: 'text-orange-600', bg: 'bg-orange-50',  ring: 'ring-orange-200' },
+  [Rol.Cocina]:        { label: 'Cocina',         icon: 'cooking',           color: 'text-amber-700',  bg: 'bg-amber-50',   ring: 'ring-amber-200'  },
+  [Rol.Domiciliario]:  { label: 'Domiciliario',   icon: 'delivery_dining',   color: 'text-indigo-700', bg: 'bg-indigo-50',  ring: 'ring-indigo-200' },
 };
 
 // Colores de avatar por inicial

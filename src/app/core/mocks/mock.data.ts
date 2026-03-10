@@ -27,6 +27,15 @@ export const MOCK_USUARIOS: (Omit<Usuario, 'password'> & {
   sedeId: string | null;
 })[] = [
   {
+    id: 'u-0',
+    nombre: 'Owner Plataforma',
+    email: 'owner@plataforma.com',
+    password: '1234',
+    rol: Rol.Owner,
+    sedeId: null,
+    activo: true,
+  },
+  {
     id: 'u-1',
     nombre: 'Carlos Super',
     email: 'superadmin@test.com',

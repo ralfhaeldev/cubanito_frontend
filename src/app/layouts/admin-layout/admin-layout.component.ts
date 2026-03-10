@@ -13,14 +13,14 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { label: 'Dashboard',   route: '/dashboard',   icon: 'dashboard',    roles: [Rol.SuperAdmin, Rol.AdminSede] },
+  { label: 'Dashboard',   route: '/dashboard',   icon: 'dashboard',    roles: [Rol.Owner, Rol.SuperAdmin, Rol.AdminSede] },
   { label: 'Pedidos',     route: '/pedidos',     icon: 'receipt_long', roles: [Rol.AdminSede, Rol.Mesero] },
   { label: 'Productos',   route: '/productos',   icon: 'lunch_dining', roles: [Rol.AdminSede] },
   { label: 'Inventario',  route: '/inventario',  icon: 'inventory_2',  roles: [Rol.AdminSede] },
   { label: 'Caja',        route: '/caja',        icon: 'point_of_sale',roles: [Rol.AdminSede] },
-  { label: 'Reportes',    route: '/reportes',    icon: 'bar_chart',    roles: [Rol.AdminSede, Rol.SuperAdmin] },
+  { label: 'Reportes',    route: '/reportes',    icon: 'bar_chart',    roles: [Rol.Owner, Rol.AdminSede, Rol.SuperAdmin] },
   { label: 'Usuarios',    route: '/usuarios',    icon: 'group',        roles: [Rol.AdminSede] },
-  { label: 'Sedes',       route: '/sedes',       icon: 'store',        roles: [Rol.SuperAdmin] },
+  { label: 'Sedes',       route: '/sedes',       icon: 'store',        roles: [Rol.Owner] },
 ];
 
 @Component({
@@ -70,7 +70,7 @@ const NAV: NavItem[] = [
 
         <!-- Sede selector -->
         @if (sidebarExpanded()) {
-          @if (auth.isSuperAdmin()) {
+          @if (auth.isGlobalRole()) {
             <div class="px-3 py-3 border-b border-gray-100">
               <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1.5">Sede activa</p>
               <select
@@ -208,7 +208,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
     const r = this.auth.rol();
     if (!r) return '';
     const map: Record<string, string> = {
-      super_admin: 'Super Admin', admin_sede: 'Admin Sede',
+      owner: 'Owner', super_admin: 'Super Admin', admin_sede: 'Admin Sede',
       mesero: 'Mesero', cocina: 'Cocina', domiciliario: 'Domiciliario',
     };
     return map[r] ?? r;
@@ -223,7 +223,7 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     if (this.isMobile()) this.sidebarOpen.set(false);
-    if (this.auth.isSuperAdmin()) {
+    if (this.auth.isGlobalRole()) {
       this.tenant.getSedes().subscribe((s) => this.sedes.set(s));
     }
     this.socket.connect();
