@@ -3,245 +3,227 @@ import { HttpClient } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { interval, Subscription } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
-import { CopPipe } from '../../../../shared/pipes/cop.pipe';
 import { Pedido, EstadoPedido, TipoPedido } from '../../../../shared/models';
 import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-vista-domiciliario',
   standalone: true,
-  imports: [DatePipe, CopPipe],
+  imports: [DatePipe],
   template: `
     <div class="flex flex-col h-full bg-gray-950">
 
-      <!-- Header -->
-      <div class="px-6 py-4 flex items-center justify-between border-b border-white/10 shrink-0">
+      <!-- Barra de estado superior -->
+      <div class="px-5 py-3 border-b border-white/10 flex items-center justify-between shrink-0">
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-indigo-500/20 flex items-center justify-center">
-            <span class="material-symbols-outlined text-indigo-400 text-xl">delivery_dining</span>
-          </div>
-          <div>
-            <h1 class="font-display font-bold text-white text-lg leading-tight">Vista Domiciliario</h1>
-            <p class="text-white/40 text-xs">
-              {{ horaActual() }}
-              @if (pendientes().length > 0) {
-                · <span class="text-indigo-400 font-semibold">
-                  {{ pendientes().length }} pendiente{{ pendientes().length !== 1 ? 's' : '' }}
-                </span>
-              } @else {
-                · <span class="text-green-400 font-semibold">Sin pendientes ✓</span>
-              }
-            </p>
-          </div>
+          @if (pendientes().length > 0) {
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/20 border border-indigo-500/30">
+              <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
+              <span class="text-indigo-300 text-sm font-semibold">
+                {{ pendientes().length }} pendiente{{ pendientes().length !== 1 ? 's' : '' }}
+              </span>
+            </div>
+          } @else {
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/20 border border-green-500/30">
+              <span class="w-2 h-2 rounded-full bg-green-400"></span>
+              <span class="text-green-300 text-sm font-semibold">Sin pendientes</span>
+            </div>
+          }
+          <span class="text-white/30 text-xs">{{ horaActual() }}</span>
         </div>
 
-        <div class="flex items-center gap-2">
-          @if (cargando()) {
-            <span class="w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>
-          } @else {
-            <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-          }
-          <span class="text-white/30 text-xs">En vivo</span>
+        <!-- Resumen del día -->
+        <div class="flex items-center gap-1.5 text-white/40 text-xs">
+          <span class="material-symbols-outlined text-sm">check_circle</span>
+          <span>{{ entregados().length }} entregado{{ entregados().length !== 1 ? 's' : '' }} hoy</span>
         </div>
       </div>
 
-      <!-- Dos paneles -->
-      <div class="flex-1 overflow-hidden grid grid-cols-2 gap-4 p-4">
+      <!-- Contenido principal -->
+      <div class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
 
-        <!-- Panel izq: Por entregar (Enviado) -->
-        <div class="flex flex-col min-w-0">
-          <div class="flex items-center justify-between px-4 py-2.5 rounded-xl border mb-3
-                      bg-indigo-950/60 border-indigo-700/40">
-            <div class="flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-              <span class="font-display font-bold text-sm text-indigo-300">Listos para entregar</span>
+        @if (cargando() && pendientes().length === 0) {
+          <!-- Skeleton -->
+          @for (i of [1, 2]; track i) {
+            <div class="rounded-2xl bg-white/5 border border-white/10 p-5 space-y-3 animate-pulse">
+              <div class="h-4 bg-white/10 rounded-full w-1/3"></div>
+              <div class="h-3 bg-white/10 rounded-full w-2/3"></div>
+              <div class="h-3 bg-white/10 rounded-full w-1/2"></div>
+              <div class="h-11 bg-white/10 rounded-xl mt-2"></div>
             </div>
-            <span class="font-black text-xl leading-none text-indigo-300">{{ pendientes().length }}</span>
-          </div>
+          }
+        }
 
-          <div class="flex-1 overflow-y-auto space-y-3 pr-0.5">
-            @if (cargando() && pendientes().length === 0) {
-              @for (i of [1,2]; track i) {
-                <div class="h-52 bg-white/5 rounded-2xl animate-pulse"></div>
-              }
-            }
-            @if (!cargando() && pendientes().length === 0) {
-              <div class="flex flex-col items-center justify-center py-20 text-white/20">
-                <span class="material-symbols-outlined text-5xl mb-3">delivery_dining</span>
-                <p class="text-sm font-medium">Sin domicilios pendientes</p>
-                <p class="text-xs mt-1">Los pedidos listos aparecerán aquí</p>
-              </div>
-            }
-
-            @for (pedido of pendientes(); track pedido.id) {
-              <div class="bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-indigo-500/30 transition-all">
-
-                <!-- Cabecera -->
-                <div class="px-4 pt-4 pb-2">
-                  <div class="flex items-center justify-between mb-1">
-                    <span class="font-display font-black text-white text-xl leading-none">
-                      #{{ pedido.id.slice(-6).toUpperCase() }}
-                    </span>
-                    <span class="text-white/30 text-xs">{{ pedido.updatedAt | date:'HH:mm' }}</span>
-                  </div>
-                  <p class="text-white/40 text-xs flex items-center gap-1">
-                    <span class="material-symbols-outlined text-xs">schedule</span>
-                    Esperando {{ tiempoTranscurrido(pedido.updatedAt) }}
-                  </p>
-                </div>
-
-                <div class="mx-4 border-t border-white/10 my-2.5"></div>
-
-                <!-- Cliente -->
-                @if (pedido.clienteDomicilio) {
-                  <div class="px-4 mb-3 space-y-2">
-                    <div class="flex items-start gap-2.5">
-                      <div class="w-7 h-7 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                        <span class="text-xs font-bold text-indigo-300">
-                          {{ pedido.clienteDomicilio.nombre[0].toUpperCase() }}
-                        </span>
-                      </div>
-                      <div class="min-w-0">
-                        <p class="text-sm font-semibold text-white">{{ pedido.clienteDomicilio.nombre }}</p>
-                        <a [href]="'tel:' + pedido.clienteDomicilio.telefono"
-                           class="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 mt-0.5">
-                          <span class="material-symbols-outlined text-[11px]">call</span>
-                          {{ pedido.clienteDomicilio.telefono }}
-                        </a>
-                      </div>
-                    </div>
-
-                    <div class="rounded-xl bg-indigo-500/10 border border-indigo-500/20 px-3 py-2.5 flex items-start gap-2">
-                      <span class="material-symbols-outlined text-indigo-400 text-sm mt-0.5 shrink-0">location_on</span>
-                      <p class="text-sm text-indigo-200">{{ pedido.clienteDomicilio.direccion }}</p>
-                    </div>
-                  </div>
-                }
-
-                <!-- Items compactos -->
-                <div class="px-4 pb-3">
-                  <p class="text-[10px] font-semibold uppercase tracking-wide text-white/30 mb-1.5">Pedido</p>
-                  <div class="space-y-1">
-                    @for (item of pedido.items; track item.id) {
-                      <div class="flex items-center justify-between gap-2">
-                        <div class="flex items-center gap-2 min-w-0">
-                          <span class="w-5 h-5 rounded-lg bg-white/10 flex items-center justify-center text-[10px] font-bold text-white/70 shrink-0">
-                            {{ item.cantidad }}
-                          </span>
-                          <span class="text-xs text-white/60 truncate">{{ item.productoNombre }}</span>
-                        </div>
-                        <span class="text-xs text-white/40 shrink-0">{{ item.subtotal | cop }}</span>
-                      </div>
-                    }
-                  </div>
-                  <div class="mt-2 pt-2 border-t border-white/10 flex items-center justify-between">
-                    <span class="text-xs text-white/40">Total</span>
-                    <span class="text-sm font-bold text-white">{{ pedido.total | cop }}</span>
-                  </div>
-                </div>
-
-                <!-- Acción -->
-                <div class="px-4 pb-4">
-                  <button
-                    class="w-full flex items-center justify-center gap-2 py-3 rounded-xl
-                           bg-indigo-500 hover:bg-indigo-400 text-white font-semibold text-sm
-                           transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                    [disabled]="actualizando()[pedido.id]"
-                    (click)="marcarEntregado(pedido)"
-                  >
-                    @if (actualizando()[pedido.id]) {
-                      <span class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                    } @else {
-                      <span class="material-symbols-outlined text-[18px]">check_circle</span>
-                    }
-                    Marcar como entregado
-                  </button>
-                </div>
-
-              </div>
-            }
-          </div>
-        </div>
-
-        <!-- Panel der: Entregados hoy -->
-        <div class="flex flex-col min-w-0">
-          <div class="flex items-center justify-between px-4 py-2.5 rounded-xl border mb-3
-                      bg-green-950/40 border-green-800/30">
-            <div class="flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-green-400"></span>
-              <span class="font-display font-bold text-sm text-green-300">Entregados hoy</span>
+        @if (!cargando() && pendientes().length === 0) {
+          <!-- Estado vacío -->
+          <div class="flex flex-col items-center justify-center py-24 text-white/20">
+            <div class="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mb-5">
+              <span class="material-symbols-outlined text-4xl">delivery_dining</span>
             </div>
-            <div class="text-right">
-              <span class="font-black text-xl leading-none text-green-300">{{ entregados().length }}</span>
-              @if (totalEntregado() > 0) {
-                <p class="text-[10px] text-green-400/60">{{ totalEntregado() | cop }}</p>
-              }
-            </div>
+            <p class="text-base font-semibold text-white/30">Todo entregado</p>
+            <p class="text-sm mt-1">No hay domicilios pendientes</p>
           </div>
+        }
 
-          <div class="flex-1 overflow-y-auto space-y-2.5 pr-0.5">
-            @if (entregados().length === 0) {
-              <div class="flex flex-col items-center justify-center py-20 text-white/20">
-                <span class="material-symbols-outlined text-5xl mb-3">history</span>
-                <p class="text-sm">Sin entregas aún hoy</p>
-              </div>
-            }
+        <!-- Tarjetas de entrega pendiente -->
+        @for (pedido of pendientes(); track pedido.id) {
+          <div class="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
 
-            @for (pedido of entregados(); track pedido.id) {
-              <div class="bg-green-950/20 border border-green-800/20 rounded-2xl px-4 py-3">
-                <div class="flex items-center justify-between mb-2">
-                  <div class="flex items-center gap-2">
-                    <span class="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
-                      <span class="material-symbols-outlined text-green-400 text-sm">check</span>
-                    </span>
-                    <span class="font-display font-bold text-green-300">#{{ pedido.id.slice(-6).toUpperCase() }}</span>
-                  </div>
-                  <span class="text-xs text-green-400/50">{{ pedido.updatedAt | date:'HH:mm' }}</span>
-                </div>
-
-                @if (pedido.clienteDomicilio) {
-                  <p class="text-xs text-green-300/60 mb-1.5 flex items-center gap-1">
-                    <span class="material-symbols-outlined text-[11px]">person</span>
-                    {{ pedido.clienteDomicilio.nombre }}
-                    <span class="mx-1 text-green-400/30">·</span>
-                    <span class="material-symbols-outlined text-[11px]">location_on</span>
-                    {{ pedido.clienteDomicilio.direccion }}
-                  </p>
-                }
-
-                <div class="flex items-center justify-between">
-                  <p class="text-xs text-green-300/40">
-                    {{ pedido.items.length }} ítem{{ pedido.items.length !== 1 ? 's' : '' }}
-                  </p>
-                  <p class="text-sm font-bold text-green-300/70">{{ pedido.total | cop }}</p>
-                </div>
-              </div>
-            }
-          </div>
-
-          <!-- Resumen total -->
-          @if (entregados().length > 0) {
-            <div class="mt-3 px-4 py-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+            <!-- Cabecera de la tarjeta -->
+            <div class="px-5 pt-4 pb-3 flex items-start justify-between">
               <div>
-                <p class="text-xs text-white/40">Total entregado</p>
-                <p class="font-display font-black text-white text-lg">{{ totalEntregado() | cop }}</p>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-display font-black text-white text-xl leading-none">
+                    #{{ pedido.id.slice(-6).toUpperCase() }}
+                  </span>
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full
+                               bg-indigo-500/20 text-indigo-300 text-[10px] font-semibold
+                               ring-1 ring-indigo-500/30">
+                    <span class="material-symbols-outlined text-[10px]">delivery_dining</span>
+                    Domicilio
+                  </span>
+                </div>
+                <p class="text-white/35 text-xs">
+                  Listo hace {{ tiempoTranscurrido(pedido.updatedAt) }}
+                </p>
               </div>
               <div class="text-right">
-                <p class="text-xs text-white/40">Entregas</p>
-                <p class="font-display font-black text-white text-lg">{{ entregados().length }}</p>
+                <p class="text-[10px] text-white/30 uppercase tracking-wide">Ítems</p>
+                <p class="text-lg font-black text-white/60 leading-none">
+                  {{ pedido.items.reduce(totalItems, 0) }}
+                </p>
               </div>
             </div>
-          }
-        </div>
 
+            <!-- Divisor -->
+            <div class="mx-5 border-t border-white/8"></div>
+
+            <!-- Datos del cliente -->
+            @if (pedido.clienteDomicilio) {
+              <div class="px-5 py-4 space-y-3">
+
+                <!-- Nombre -->
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-xl bg-indigo-500/20 flex items-center justify-center shrink-0">
+                    <span class="text-sm font-black text-indigo-300">
+                      {{ pedido.clienteDomicilio.nombre[0].toUpperCase() }}
+                    </span>
+                  </div>
+                  <div class="min-w-0">
+                    <p class="text-sm font-semibold text-white truncate">
+                      {{ pedido.clienteDomicilio.nombre }}
+                    </p>
+                    <!-- Teléfono: toca para llamar -->
+                    <a
+                      [href]="'tel:' + pedido.clienteDomicilio.telefono"
+                      class="inline-flex items-center gap-1 text-indigo-400 text-xs font-medium
+                             hover:text-indigo-300 active:text-indigo-200 transition-colors"
+                    >
+                      <span class="material-symbols-outlined text-[13px]">call</span>
+                      {{ pedido.clienteDomicilio.telefono }}
+                    </a>
+                  </div>
+                </div>
+
+                <!-- Dirección -->
+                <div class="flex items-start gap-3 rounded-xl bg-indigo-500/10
+                            border border-indigo-500/20 px-4 py-3">
+                  <span class="material-symbols-outlined text-indigo-400 text-base mt-0.5 shrink-0">
+                    location_on
+                  </span>
+                  <p class="text-sm text-indigo-200 leading-snug">
+                    {{ pedido.clienteDomicilio.direccion }}
+                  </p>
+                </div>
+
+              </div>
+            }
+
+            <!-- Divisor -->
+            <div class="mx-5 border-t border-white/8"></div>
+
+            <!-- Productos -->
+            <div class="px-5 py-3">
+              <p class="text-[10px] font-semibold uppercase tracking-widest text-white/25 mb-2">
+                Pedido
+              </p>
+              <div class="space-y-1.5">
+                @for (item of pedido.items; track item.id) {
+                  <div class="flex items-center gap-2.5">
+                    <span class="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center
+                                 text-[11px] font-black text-white/60 shrink-0">
+                      {{ item.cantidad }}
+                    </span>
+                    <span class="text-sm text-white/60 truncate">{{ item.productoNombre }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Botón de acción -->
+            <div class="px-5 pb-5 pt-2">
+              <button
+                class="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl
+                       bg-indigo-500 hover:bg-indigo-400 active:bg-indigo-600
+                       text-white font-bold text-sm transition-all active:scale-[0.98]
+                       disabled:opacity-50 disabled:cursor-not-allowed"
+                [disabled]="actualizando()[pedido.id]"
+                (click)="marcarEntregado(pedido)"
+              >
+                @if (actualizando()[pedido.id]) {
+                  <span class="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                  Registrando...
+                } @else {
+                  <span class="material-symbols-outlined text-xl">check_circle</span>
+                  Marcar como entregado
+                }
+              </button>
+            </div>
+
+          </div>
+        }
+
+        <!-- Historial del día (compacto) -->
+        @if (entregados().length > 0) {
+          <div class="mt-2">
+            <p class="text-[10px] font-semibold uppercase tracking-widest text-white/25 px-1 mb-3">
+              Entregados hoy
+            </p>
+            <div class="space-y-2">
+              @for (pedido of entregados(); track pedido.id) {
+                <div class="flex items-center gap-3 px-4 py-3 rounded-xl
+                            bg-green-950/30 border border-green-800/25">
+                  <span class="w-7 h-7 rounded-full bg-green-500/20 flex items-center
+                               justify-center shrink-0">
+                    <span class="material-symbols-outlined text-green-400 text-sm">check</span>
+                  </span>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-bold text-green-300">
+                      #{{ pedido.id.slice(-6).toUpperCase() }}
+                    </p>
+                    @if (pedido.clienteDomicilio) {
+                      <p class="text-xs text-green-400/50 truncate">
+                        {{ pedido.clienteDomicilio.nombre }} · {{ pedido.clienteDomicilio.direccion }}
+                      </p>
+                    }
+                  </div>
+                  <span class="text-xs text-green-400/40 shrink-0">
+                    {{ pedido.updatedAt | date:'HH:mm' }}
+                  </span>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <div class="h-4"></div>
       </div>
+
     </div>
   `,
 })
 export class VistaDomiciliario implements OnInit, OnDestroy {
   private http = inject(HttpClient);
-
-  readonly TipoPedido = TipoPedido;
 
   cargando     = signal(true);
   pedidos      = signal<Pedido[]>([]);
@@ -250,28 +232,29 @@ export class VistaDomiciliario implements OnInit, OnDestroy {
 
   private subs = new Subscription();
 
-  // Domicilios listos para entregar
   pendientes = computed(() =>
     this.pedidos()
       .filter((p) => p.tipo === TipoPedido.Domicilio && p.estado === EstadoPedido.Enviado)
       .sort((a, b) => new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()),
   );
 
-  // Domicilios ya entregados hoy
   entregados = computed(() => {
     const hoy = new Date().toDateString();
     return this.pedidos()
-      .filter((p) => p.tipo === TipoPedido.Domicilio
-        && p.estado === EstadoPedido.Entregado
-        && new Date(p.updatedAt).toDateString() === hoy)
+      .filter(
+        (p) =>
+          p.tipo === TipoPedido.Domicilio &&
+          p.estado === EstadoPedido.Entregado &&
+          new Date(p.updatedAt).toDateString() === hoy,
+      )
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   });
-
-  totalEntregado = computed(() => this.entregados().reduce((s, p) => s + p.total, 0));
 
   horaActual = computed(() =>
     this.hora().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
   );
+
+  readonly totalItems = (acc: number, item: { cantidad: number }) => acc + item.cantidad;
 
   ngOnInit(): void {
     this.cargar();
@@ -283,13 +266,18 @@ export class VistaDomiciliario implements OnInit, OnDestroy {
     this.subs.add(interval(1000).subscribe(() => this.hora.set(new Date())));
   }
 
-  ngOnDestroy(): void { this.subs.unsubscribe(); }
+  ngOnDestroy(): void {
+    this.subs.unsubscribe();
+  }
 
   private cargar(): void {
     this.cargando.set(true);
     this.http.get<Pedido[]>(`${environment.apiUrl}/pedidos`).subscribe({
-      next:  (p) => { this.pedidos.set(p); this.cargando.set(false); },
-      error: ()  => this.cargando.set(false),
+      next: (p) => {
+        this.pedidos.set(p);
+        this.cargando.set(false);
+      },
+      error: () => this.cargando.set(false),
     });
   }
 
@@ -303,10 +291,15 @@ export class VistaDomiciliario implements OnInit, OnDestroy {
   marcarEntregado(pedido: Pedido): void {
     this.actualizando.update((m) => ({ ...m, [pedido.id]: true }));
     this.http
-      .patch<Pedido>(`${environment.apiUrl}/pedidos/${pedido.id}/estado`, { estado: EstadoPedido.Entregado })
+      .patch<Pedido>(`${environment.apiUrl}/pedidos/${pedido.id}/estado`, {
+        estado: EstadoPedido.Entregado,
+      })
       .subscribe({
-        next:  (u) => { this.pedidos.update((l) => l.map((p) => p.id === u.id ? u : p)); this.actualizando.update((m) => ({ ...m, [pedido.id]: false })); },
-        error: ()  => this.actualizando.update((m) => ({ ...m, [pedido.id]: false })),
+        next: (u) => {
+          this.pedidos.update((l) => l.map((p) => (p.id === u.id ? u : p)));
+          this.actualizando.update((m) => ({ ...m, [pedido.id]: false }));
+        },
+        error: () => this.actualizando.update((m) => ({ ...m, [pedido.id]: false })),
       });
   }
 }

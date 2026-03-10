@@ -96,7 +96,7 @@ export class AuthService {
       case Rol.Cocina:
         return '/cocina';
       case Rol.Domiciliario:
-        return '/domicilios';
+        return '/domiciliario';
       default:
         return '/auth/login';
     }
