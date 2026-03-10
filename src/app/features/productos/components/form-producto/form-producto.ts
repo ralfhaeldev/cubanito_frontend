@@ -441,9 +441,7 @@ export class FormProducto implements OnInit {
   inventario = signal<ItemInventario[]>([]);
 
   modoEdicion = computed(() => !!this.productoEditar());
-  tipoActual = computed(
-    () => (this.form?.getRawValue().tipo as TipoProducto) ?? TipoProducto.Preparado,
-  );
+  tipoActual = signal<TipoProducto>(TipoProducto.Preparado);
 
   form = this.fb.group({
     nombre: ['', Validators.required],
@@ -472,6 +470,7 @@ export class FormProducto implements OnInit {
 
     const p = this.productoEditar();
     if (p) {
+      this.tipoActual.set(p.tipo);
       this.form.patchValue({
         nombre: p.nombre,
         tipo: p.tipo,
@@ -485,19 +484,19 @@ export class FormProducto implements OnInit {
       }
     }
 
-    this.form.get('tipo')?.valueChanges.subscribe(() => this.actualizarValidaciones());
     this.actualizarValidaciones();
   }
 
   setTipo(tipo: TipoProducto): void {
     if (this.modoEdicion()) return;
+    this.tipoActual.set(tipo);
     this.form.patchValue({ tipo });
     this.ingredientesArray.clear();
     this.actualizarValidaciones();
   }
 
   private actualizarValidaciones(): void {
-    const tipo = this.form.getRawValue().tipo;
+    const tipo = this.tipoActual();
     const itemCtrl = this.form.get('itemInventarioId')!;
     if (tipo === TipoProducto.Simple) {
       itemCtrl.setValidators(Validators.required);
