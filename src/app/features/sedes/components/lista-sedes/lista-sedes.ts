@@ -138,7 +138,7 @@ import { environment } from '../../../../../environments/environment';
                         <div class="flex items-center gap-1.5">
                           <span class="material-symbols-outlined text-gray-400 text-sm">group</span>
                           <span class="font-display font-bold text-gray-800">
-                            {{ usuariosPorSede()[sede.id] ?? 0 }}
+                            {{ usuariosPorSede()[sede.id] }}
                           </span>
                         </div>
                       </div>

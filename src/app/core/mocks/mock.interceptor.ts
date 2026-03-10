@@ -112,7 +112,7 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
       return of(
         new HttpResponse({ status: 401, body: { message: 'Credenciales inválidas' } }),
       ).pipe(delay(300));
-    const token = makeJwt({ sub: user.id, email: user.email, rol: user.rol, sedeId: user.sedeId });
+    const token = makeJwt({ sub: user.id, nombre: user.nombre, email: user.email, rol: user.rol, sedeId: user.sedeId });
     return ok({
       accessToken: token,
       user: {

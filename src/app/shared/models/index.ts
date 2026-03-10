@@ -12,6 +12,7 @@ export enum Rol {
 
 export interface JwtPayload {
   sub:     string;   // userId
+  nombre:  string;
   email:   string;
   rol:     Rol;
   sedeId:  string | null;  // null para Super Admin

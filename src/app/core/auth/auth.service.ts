@@ -28,13 +28,16 @@ export class AuthService {
   // ─── Signals ─────────────────────────────────────────────────────────────
   private readonly _currentUser = signal<JwtPayload | null>(this.loadFromStorage());
 
-  readonly currentUser  = this._currentUser.asReadonly();
-  readonly isLoggedIn   = computed(() => !!this._currentUser());
-  readonly rol          = computed(() => this._currentUser()?.rol ?? null);
-  readonly sedeId       = computed(() => this._currentUser()?.sedeId ?? null);
+  readonly currentUser = this._currentUser.asReadonly();
+  readonly isLoggedIn = computed(() => !!this._currentUser());
+  readonly rol = computed(() => this._currentUser()?.rol ?? null);
+  readonly sedeId = computed(() => this._currentUser()?.sedeId ?? null);
   readonly isSuperAdmin = computed(() => this._currentUser()?.rol === Rol.SuperAdmin);
 
-  constructor(private http: HttpClient, private router: Router) {}
+  constructor(
+    private http: HttpClient,
+    private router: Router,
+  ) {}
 
   // ─── Login / Logout ───────────────────────────────────────────────────────
 
@@ -44,7 +47,15 @@ export class AuthService {
       .pipe(
         tap((res) => {
           localStorage.setItem(this.TOKEN_KEY, res.accessToken);
-          this._currentUser.set(decodeJwt(res.accessToken));
+          this._currentUser.set({
+            sub: res.user.id,
+            nombre: res.user.nombre,
+            email: res.user.email,
+            rol: res.user.rol,
+            sedeId: res.user.sedeId,
+          });
+
+          this.router.navigate([this.getRutaInicial(res.user.rol)]);
         }),
       );
   }
@@ -73,12 +84,18 @@ export class AuthService {
 
   getHomeRoute(): string {
     switch (this.rol()) {
-      case Rol.SuperAdmin:   return '/dashboard';
-      case Rol.AdminSede:    return '/dashboard';
-      case Rol.Mesero:       return '/pedidos';
-      case Rol.Cocina:       return '/cocina';
-      case Rol.Domiciliario: return '/domicilios';
-      default:               return '/auth/login';
+      case Rol.SuperAdmin:
+        return '/dashboard';
+      case Rol.AdminSede:
+        return '/dashboard';
+      case Rol.Mesero:
+        return '/pedidos';
+      case Rol.Cocina:
+        return '/cocina';
+      case Rol.Domiciliario:
+        return '/domicilios';
+      default:
+        return '/auth/login';
     }
   }
 
@@ -86,5 +103,16 @@ export class AuthService {
     const token = localStorage.getItem(this.TOKEN_KEY);
     if (!token || isTokenExpired(token)) return null;
     return decodeJwt(token);
+  }
+
+  private getRutaInicial(rol: Rol): string {
+    switch (rol) {
+      case Rol.Cocina:
+        return '/cocina';
+      case Rol.Domiciliario:
+        return '/domiciliario';
+      default:
+        return '/dashboard';
+    }
   }
 }
