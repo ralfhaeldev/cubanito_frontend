@@ -391,7 +391,7 @@ export class ListaPedidos implements OnInit, OnDestroy {
 
   private cargarPedidos(): void {
     this.cargando.set(true);
-    this.http.get<Pedido[]>(`${environment.apiUrl}/pedidos`).subscribe({
+    this.http.get<Pedido[]>(`${environment.apiUrl}/orders`).subscribe({
       next: (data) => {
         this.pedidos.set(data);
         this.cargando.set(false);

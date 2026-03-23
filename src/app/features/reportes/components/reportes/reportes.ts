@@ -377,9 +377,9 @@ export class Reportes implements OnInit, OnDestroy {
 
     const base = environment.apiUrl;
     forkJoin({
-      resumen:   this.http.get<Resumen>(`${base}/reportes/resumen?periodo=${periodo}`),
-      ventas:    this.http.get<VentaDiaria[]>(`${base}/reportes/ventas?periodo=${periodo}`),
-      productos: this.http.get<ProductoVendido[]>(`${base}/reportes/productos-top?periodo=${periodo}`),
+      resumen:   this.http.get<Resumen>(`${base}/reports/summary?periodo=${periodo}`),
+      ventas:    this.http.get<VentaDiaria[]>(`${base}/reports/sales?periodo=${periodo}`),
+      productos: this.http.get<ProductoVendido[]>(`${base}/reports/product-performance?periodo=${periodo}`),
     }).subscribe(({ resumen, ventas, productos }) => {
       this.resumen.set(resumen);
       this.loadingResumen.set(false);

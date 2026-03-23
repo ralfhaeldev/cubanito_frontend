@@ -220,8 +220,8 @@ export class ListaProductos implements OnInit {
 
   ngOnInit(): void {
     Promise.all([
-      this.http.get<Producto[]>(`${environment.apiUrl}/productos`).toPromise(),
-      this.http.get<ItemInventario[]>(`${environment.apiUrl}/inventario`).toPromise(),
+      this.http.get<Producto[]>(`${environment.apiUrl}/product`).toPromise(),
+      this.http.get<ItemInventario[]>(`${environment.apiUrl}/inventory`).toPromise(),
     ]).then(([productos, inventario]) => {
       this.productos.set(productos ?? []);
       this.inventario.set(inventario ?? []);
@@ -250,7 +250,7 @@ export class ListaProductos implements OnInit {
   cerrarForm(): void { this.mostrarForm.set(false); this.productoEditando.set(null); }
 
   toggleActivo(p: Producto): void {
-    this.http.patch<Producto>(`${environment.apiUrl}/productos/${p.id}`, { activo: !p.activo })
+    this.http.patch<Producto>(`${environment.apiUrl}/product/${p.id}`, { activo: !p.activo })
       .subscribe((u) => this.productos.update((list) => list.map((x) => x.id === u.id ? u : x)));
   }
 

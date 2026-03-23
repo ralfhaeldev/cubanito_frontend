@@ -484,7 +484,7 @@ export class DetallePedido {
   cambiarEstado(nuevoEstado: EstadoPedido): void {
     this.cargando.set(true);
     this.http
-      .patch<Pedido>(`${environment.apiUrl}/pedidos/${this.pedido().id}/estado`, {
+      .patch<Pedido>(`${environment.apiUrl}/orders/${this.pedido().id}/status`, {
         estado: nuevoEstado,
       })
       .subscribe({
@@ -501,7 +501,7 @@ export class DetallePedido {
     this.cargando.set(true);
     const { metodo, montoRecibido } = this.pagoForm.value;
     this.http
-      .post(`${environment.apiUrl}/pedidos/${this.pedido().id}/finalizar`, {
+      .post(`${environment.apiUrl}/orders/${this.pedido().id}/finalizar`, {
         metodo,
         monto: this.pedido().total,
         vuelto: metodo === MetodoPago.Efectivo ? montoRecibido! - this.pedido().total : 0,

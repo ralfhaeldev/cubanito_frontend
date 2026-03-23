@@ -184,7 +184,7 @@ export class FormItemInventario {
     this.guardando.set(true);
     this.errorMsg.set('');
     this.http
-      .post<ItemInventario>(`${environment.apiUrl}/inventario`, {
+      .post<ItemInventario>(`${environment.apiUrl}/inventory`, {
         ...this.form.value,
         activo: true,
       })

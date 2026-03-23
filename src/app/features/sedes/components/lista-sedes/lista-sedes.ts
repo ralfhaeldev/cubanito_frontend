@@ -263,7 +263,7 @@ export class ListaSedes implements OnInit {
 
   private cargarSedes(): void {
     this.cargando.set(true);
-    this.http.get<Sede[]>(`${environment.apiUrl}/sedes`).subscribe({
+    this.http.get<Sede[]>(`${environment.apiUrl}/branches`).subscribe({
       next:  (data) => { this.sedes.set(data); this.cargando.set(false); },
       error: ()     => this.cargando.set(false),
     });
@@ -288,7 +288,7 @@ export class ListaSedes implements OnInit {
 
   toggleActiva(sede: Sede): void {
     this.http
-      .patch<Sede>(`${environment.apiUrl}/sedes/${sede.id}`, { activa: !sede.activa })
+      .patch<Sede>(`${environment.apiUrl}/branches/${sede.id}`, { activa: !sede.activa })
       .subscribe((actualizada) => {
         this.sedes.update((list) =>
           list.map((s) => s.id === actualizada.id ? actualizada : s),

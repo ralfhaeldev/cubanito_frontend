@@ -284,7 +284,7 @@ export class FormUsuario implements OnInit {
 
   ngOnInit(): void {
     // Cargar sedes activas
-    this.http.get<Sede[]>(`${environment.apiUrl}/sedes`).subscribe((s) =>
+    this.http.get<Sede[]>(`${environment.apiUrl}/branches`).subscribe((s) =>
       this.sedes.set(s.filter((x) => x.activa)),
     );
 

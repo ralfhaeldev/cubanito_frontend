@@ -333,8 +333,8 @@ export class ListaInventario implements OnInit {
 
   ngOnInit(): void {
     forkJoin({
-      items:   this.http.get<ItemInventario[]>(`${environment.apiUrl}/inventario`),
-      ajustes: this.http.get<AjusteInventario[]>(`${environment.apiUrl}/inventario/ajustes`),
+      items:   this.http.get<ItemInventario[]>(`${environment.apiUrl}/inventory`),
+      ajustes: this.http.get<AjusteInventario[]>(`${environment.apiUrl}/inventory/ajustes`),
     }).subscribe({
       next: ({ items, ajustes }) => {
         this.items.set(items);

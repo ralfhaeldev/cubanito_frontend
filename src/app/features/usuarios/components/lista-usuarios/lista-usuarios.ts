@@ -265,7 +265,7 @@ export class ListaUsuarios implements OnInit {
     this.cargando.set(true);
     Promise.all([
       this.http.get<Usuario[]>(`${environment.apiUrl}/usuarios`).toPromise(),
-      this.http.get<Sede[]>(`${environment.apiUrl}/sedes`).toPromise(),
+      this.http.get<Sede[]>(`${environment.apiUrl}/branches`).toPromise(),
     ]).then(([usuarios, sedes]) => {
       this.usuarios.set(usuarios ?? []);
       this.sedes.set(sedes ?? []);

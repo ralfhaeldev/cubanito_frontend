@@ -231,7 +231,7 @@ export class FormAjusteInventario {
     if (this.form.invalid) return;
     this.guardando.set(true);
     this.http
-      .post<AjusteInventario>(`${environment.apiUrl}/inventario/ajustes`, {
+      .post<AjusteInventario>(`${environment.apiUrl}/inventory/ajustes`, {
         itemId: this.item().id,
         ...this.form.value,
       })

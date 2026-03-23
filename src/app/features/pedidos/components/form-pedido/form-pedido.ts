@@ -246,7 +246,7 @@ export class FormPedido {
 
   constructor() {
     this.http
-      .get<Producto[]>(`${environment.apiUrl}/productos`)
+      .get<Producto[]>(`${environment.apiUrl}/product`)
       .subscribe((p) => this.productos.set(p.filter((x) => x.activo)));
   }
 
@@ -322,7 +322,7 @@ export class FormPedido {
         : undefined,
     };
 
-    this.http.post<Pedido>(`${environment.apiUrl}/pedidos`, body).subscribe({
+    this.http.post<Pedido>(`${environment.apiUrl}/orders`, body).subscribe({
       next:  (p) => { this.creado.emit(p); this.guardando.set(false); },
       error: ()  => this.guardando.set(false),
     });

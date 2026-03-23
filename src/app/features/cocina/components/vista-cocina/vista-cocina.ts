@@ -254,7 +254,7 @@ export class VistaCocina implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.cargar();
     this.subs.add(
-      interval(12000).pipe(switchMap(() => this.http.get<Pedido[]>(`${environment.apiUrl}/pedidos/activos`)))
+      interval(12000).pipe(switchMap(() => this.http.get<Pedido[]>(`${environment.apiUrl}/orders/activos`)))
         .subscribe((p) => this.pedidos.set(p)),
     );
     this.subs.add(interval(1000).subscribe(() => this.hora.set(new Date())));
@@ -264,7 +264,7 @@ export class VistaCocina implements OnInit, OnDestroy {
 
   private cargar(): void {
     this.cargando.set(true);
-    this.http.get<Pedido[]>(`${environment.apiUrl}/pedidos/activos`).subscribe({
+    this.http.get<Pedido[]>(`${environment.apiUrl}/orders/activos`).subscribe({
       next:  (p) => { this.pedidos.set(p); this.cargando.set(false); },
       error: ()  => this.cargando.set(false),
     });
@@ -290,7 +290,7 @@ export class VistaCocina implements OnInit, OnDestroy {
 
   avanzarEstado(pedido: Pedido, nuevoEstado: EstadoPedido): void {
     this.actualizando.update((m) => ({ ...m, [pedido.id]: true }));
-    this.http.patch<Pedido>(`${environment.apiUrl}/pedidos/${pedido.id}/estado`, { estado: nuevoEstado }).subscribe({
+    this.http.patch<Pedido>(`${environment.apiUrl}/orders/${pedido.id}/status`, { estado: nuevoEstado }).subscribe({
       next:  (u) => { this.pedidos.update((l) => l.map((p) => p.id === u.id ? u : p)); this.actualizando.update((m) => ({ ...m, [pedido.id]: false })); },
       error: ()  => this.actualizando.update((m) => ({ ...m, [pedido.id]: false })),
     });

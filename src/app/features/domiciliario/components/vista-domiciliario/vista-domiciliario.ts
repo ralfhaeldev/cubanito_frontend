@@ -260,7 +260,7 @@ export class VistaDomiciliario implements OnInit, OnDestroy {
     this.cargar();
     this.subs.add(
       interval(12000)
-        .pipe(switchMap(() => this.http.get<Pedido[]>(`${environment.apiUrl}/pedidos`)))
+        .pipe(switchMap(() => this.http.get<Pedido[]>(`${environment.apiUrl}/orders`)))
         .subscribe((p) => this.pedidos.set(p)),
     );
     this.subs.add(interval(1000).subscribe(() => this.hora.set(new Date())));
@@ -272,7 +272,7 @@ export class VistaDomiciliario implements OnInit, OnDestroy {
 
   private cargar(): void {
     this.cargando.set(true);
-    this.http.get<Pedido[]>(`${environment.apiUrl}/pedidos`).subscribe({
+    this.http.get<Pedido[]>(`${environment.apiUrl}/orders`).subscribe({
       next: (p) => {
         this.pedidos.set(p);
         this.cargando.set(false);
@@ -291,7 +291,7 @@ export class VistaDomiciliario implements OnInit, OnDestroy {
   marcarEntregado(pedido: Pedido): void {
     this.actualizando.update((m) => ({ ...m, [pedido.id]: true }));
     this.http
-      .patch<Pedido>(`${environment.apiUrl}/pedidos/${pedido.id}/estado`, {
+      .patch<Pedido>(`${environment.apiUrl}/orders/${pedido.id}/status`, {
         estado: EstadoPedido.Entregado,
       })
       .subscribe({

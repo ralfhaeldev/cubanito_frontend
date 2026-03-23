@@ -465,7 +465,7 @@ export class FormProducto implements OnInit {
 
   ngOnInit(): void {
     this.http
-      .get<ItemInventario[]>(`${environment.apiUrl}/inventario`)
+      .get<ItemInventario[]>(`${environment.apiUrl}/inventory`)
       .subscribe((items) => this.inventario.set(items.filter((i) => i.activo)));
 
     const p = this.productoEditar();
@@ -565,8 +565,8 @@ export class FormProducto implements OnInit {
 
     const p = this.productoEditar();
     const req$ = p
-      ? this.http.patch<Producto>(`${environment.apiUrl}/productos/${p.id}`, body)
-      : this.http.post<Producto>(`${environment.apiUrl}/productos`, body);
+      ? this.http.patch<Producto>(`${environment.apiUrl}/product/${p.id}`, body)
+      : this.http.post<Producto>(`${environment.apiUrl}/product`, body);
 
     req$.subscribe({
       next: (prod) => {

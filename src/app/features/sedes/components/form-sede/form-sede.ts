@@ -179,8 +179,8 @@ export class FormSede implements OnInit {
     const s    = this.sedeEditar();
 
     const req$ = s
-      ? this.http.patch<Sede>(`${environment.apiUrl}/sedes/${s.id}`, body)
-      : this.http.post<Sede>(`${environment.apiUrl}/sedes`, body);
+      ? this.http.patch<Sede>(`${environment.apiUrl}/branches/${s.id}`, body)
+      : this.http.post<Sede>(`${environment.apiUrl}/branches`, body);
 
     req$.subscribe({
       next: (sede) => {

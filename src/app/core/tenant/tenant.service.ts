@@ -15,7 +15,7 @@ export class TenantService {
   constructor(private http: HttpClient, private auth: AuthService) {}
 
   getSedes(): Observable<Sede[]> {
-    return this.http.get<Sede[]>(`${environment.apiUrl}/sedes`);
+    return this.http.get<Sede[]>(`${environment.apiUrl}/branches`);
   }
 
   setActiveSede(sede: Sede): void {

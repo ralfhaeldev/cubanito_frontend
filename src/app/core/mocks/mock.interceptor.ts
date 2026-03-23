@@ -15,7 +15,7 @@ import {
 } from './mock.data';
 import { EstadoPedido, Pedido, TipoProducto } from '../../shared/models';
 
-export const MOCKS_ENABLED = true;
+export const MOCKS_ENABLED = false;
 
 // ─── Estado mutable en memoria ────────────────────────────────────────────────
 let productos = [...MOCK_PRODUCTOS];
@@ -101,7 +101,7 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
   if (!MOCKS_ENABLED) return next(req);
 
   const { method } = req;
-  const path = req.url.replace(/^https?:\/\/[^/]+\//, '').split('?')[0];
+  const path = req.url.replace(/^https?:\/\/[^/]+\/api\//, '').split('?')[0];
   const params = new URL(req.url, 'http://localhost').searchParams;
 
   // ── Auth ───────────────────────────────────────────────────────────────────
@@ -125,54 +125,54 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
     });
   }
 
-  // ── Sedes ──────────────────────────────────────────────────────────────────
-  if (method === 'GET' && path === 'sedes') return ok(sedes);
-  if (method === 'POST' && path === 'sedes') {
+  // ── Branches (Sedes) ───────────────────────────────────────────────────────
+  if (method === 'GET' && path === 'branches') return ok(sedes);
+  if (method === 'POST' && path === 'branches') {
     const body = req.body as { nombre: string };
     const nueva = { id: `sede-${Date.now()}`, nombre: body.nombre, activa: true };
     sedes = [...sedes, nueva];
     return created(nueva);
   }
-  if (method === 'PATCH' && path.startsWith('sedes/')) {
+  if (method === 'PATCH' && path.startsWith('branches/')) {
     const id = path.split('/')[1];
     sedes = sedes.map((s) => (s.id === id ? { ...s, ...(req.body as object) } : s));
     return ok(sedes.find((s) => s.id === id));
   }
-  if (method === 'DELETE' && path.startsWith('sedes/')) {
+  if (method === 'DELETE' && path.startsWith('branches/')) {
     const id = path.split('/')[1];
     sedes = sedes.filter((s) => s.id !== id);
     return noContent();
   }
 
-  // ── Productos ──────────────────────────────────────────────────────────────
-  if (method === 'GET' && path === 'productos') return ok(productos);
-  if (method === 'POST' && path === 'productos') {
+  // ── Product (Productos) ────────────────────────────────────────────────────
+  if (method === 'GET' && path === 'product') return ok(productos);
+  if (method === 'POST' && path === 'product') {
     const body = req.body as (typeof productos)[0];
     const nuevo = { ...body, id: `p-${Date.now()}`, activo: true };
     productos = [nuevo, ...productos];
     return created(nuevo);
   }
-  if (method === 'PATCH' && path.startsWith('productos/')) {
+  if (method === 'PATCH' && path.startsWith('product/')) {
     const id = path.split('/')[1];
     productos = productos.map((p) => (p.id === id ? { ...p, ...(req.body as object) } : p));
     return ok(productos.find((p) => p.id === id));
   }
-  if (method === 'DELETE' && path.startsWith('productos/')) {
+  if (method === 'DELETE' && path.startsWith('product/')) {
     const id = path.split('/')[1];
     productos = productos.map((p) => (p.id === id ? { ...p, activo: false } : p));
     return noContent();
   }
 
-  // ── Pedidos ────────────────────────────────────────────────────────────────
-  if (method === 'GET' && path === 'pedidos') return ok(pedidos);
-  if (method === 'GET' && path === 'pedidos/activos')
+  // ── Orders (Pedidos) ───────────────────────────────────────────────────────
+  if (method === 'GET' && path === 'orders') return ok(pedidos);
+  if (method === 'GET' && path === 'orders/activos')
     return ok(
       pedidos.filter((p) => ![EstadoPedido.Finalizado, EstadoPedido.Rechazado].includes(p.estado)),
     );
-  if (method === 'GET' && path.startsWith('pedidos/') && path.split('/').length === 2) {
+  if (method === 'GET' && path.startsWith('orders/') && path.split('/').length === 2) {
     return ok(pedidos.find((p) => p.id === path.split('/')[1]) ?? null);
   }
-  if (method === 'POST' && path === 'pedidos') {
+  if (method === 'POST' && path === 'orders') {
     const body = req.body as Partial<Pedido>;
     const nuevo: Pedido = {
       id: `ped-${Date.now()}`,
@@ -189,7 +189,7 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
     pedidos = [nuevo, ...pedidos];
     return created(nuevo);
   }
-  if (method === 'PATCH' && path.match(/^pedidos\/[^/]+\/estado$/)) {
+  if (method === 'PATCH' && path.match(/^orders\/[^/]+\/status$/)) {
     const id = path.split('/')[1];
     const estado = (req.body as { estado: EstadoPedido }).estado;
     pedidos = pedidos.map((p) =>
@@ -197,7 +197,7 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
     );
     return ok(pedidos.find((p) => p.id === id));
   }
-  if (method === 'POST' && path.match(/^pedidos\/[^/]+\/finalizar$/)) {
+  if (method === 'POST' && path.match(/^orders\/[^/]+\/finalizar$/)) {
     const id = path.split('/')[1];
     const pedido = pedidos.find((p) => p.id === id);
     if (pedido) {
@@ -271,21 +271,21 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
     return ok(usuarios.find((u) => u.id === id));
   }
 
-  // ── Inventario ─────────────────────────────────────────────────────────────
-  if (method === 'GET' && path === 'inventario') return ok(inventario, 300);
-  if (method === 'POST' && path === 'inventario') {
+  // ── Inventory (Inventario) ─────────────────────────────────────────────────
+  if (method === 'GET' && path === 'inventory') return ok(inventario, 300);
+  if (method === 'POST' && path === 'inventory') {
     const body = req.body as any;
     const nuevo = { id: `inv-${Date.now()}`, ...body, ultimoAjuste: null };
     inventario = [nuevo, ...inventario];
     return created(nuevo);
   }
-  if (method === 'PATCH' && path.startsWith('inventario/') && path.split('/').length === 2) {
+  if (method === 'PATCH' && path.startsWith('inventory/') && path.split('/').length === 2) {
     const id = path.split('/')[1];
     inventario = inventario.map((i) => (i.id === id ? { ...i, ...(req.body as object) } : i));
     return ok(inventario.find((i) => i.id === id));
   }
-  if (method === 'GET' && path === 'inventario/ajustes') return ok(ajustes, 300);
-  if (method === 'POST' && path === 'inventario/ajustes') {
+  if (method === 'GET' && path === 'inventory/ajustes') return ok(ajustes, 300);
+  if (method === 'POST' && path === 'inventory/ajustes') {
     const body = req.body as {
       itemId: string;
       tipo: 'entrada' | 'salida' | 'ajuste';
@@ -313,8 +313,8 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
     return created(nuevoAjuste);
   }
 
-  // ── Reportes ───────────────────────────────────────────────────────────────
-  if (method === 'GET' && path === 'reportes/ventas') {
+  // ── Reports (Reportes) ─────────────────────────────────────────────────────
+  if (method === 'GET' && path === 'reports/sales') {
     const periodo = params.get('periodo') ?? '7d';
     let dias = MOCK_VENTAS_DIARIAS;
     if (periodo === 'today') {
@@ -337,7 +337,7 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
     }
     return ok(dias, 400);
   }
-  if (method === 'GET' && path === 'reportes/productos-top') {
+  if (method === 'GET' && path === 'reports/product-performance') {
     const factor = params.get('periodo') === '30d' ? 4.2 : 1;
     return ok(
       MOCK_PRODUCTOS_VENDIDOS.map((p) => ({
@@ -349,7 +349,7 @@ export const mockInterceptor: HttpInterceptorFn = (req, next) => {
     );
   }
   if (method === 'GET' && path === 'reportes/caja-historial') return ok(MOCK_CAJA_HISTORIAL, 400);
-  if (method === 'GET' && path === 'reportes/resumen') {
+  if (method === 'GET' && path === 'reports/summary') {
     const periodo = params.get('periodo') ?? '7d';
     const slice = periodo === 'today' ? MOCK_VENTAS_DIARIAS.slice(-1) : MOCK_VENTAS_DIARIAS;
     const factor = periodo === '30d' ? 4.2 : 1;

@@ -294,7 +294,7 @@ export class Dashboard implements OnInit {
 
   ngOnInit(): void {
     forkJoin({
-      pedidos:     this.http.get<Pedido[]>(`${environment.apiUrl}/pedidos`),
+      pedidos:     this.http.get<Pedido[]>(`${environment.apiUrl}/orders`),
       caja:        this.http.get<Caja>(`${environment.apiUrl}/caja`),
       movimientos: this.http.get<Movimiento[]>(`${environment.apiUrl}/movimientos`),
     }).subscribe({
